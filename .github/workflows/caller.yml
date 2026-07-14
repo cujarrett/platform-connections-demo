@@ -5,11 +5,33 @@ on:
     branches: [main]
     paths:
       - 'caller/**'
+  pull_request:
+    paths:
+      - 'caller/**'
   workflow_dispatch:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: caller/go.mod
+
+      - name: Test
+        working-directory: caller
+        run: go test ./...
+
+      - name: Lint
+        working-directory: caller
+        run: go vet ./...
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
 
     permissions:
       contents: read
@@ -17,15 +39,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: caller/go.mod
-
-      - name: Test
-        working-directory: caller
-        run: go test -race ./...
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -47,5 +60,5 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/cujarrett/caller:latest
-            ghcr.io/cujarrett/caller:sha-${{ github.sha }}
+            ghcr.io/cujarrett/platform-connections-demo-caller:latest
+            ghcr.io/cujarrett/platform-connections-demo-caller:sha-${{ github.sha }}
