@@ -2,7 +2,7 @@
 
 Test apps for my homelab's platform-connections mesh POC — See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo.
 
-One repo, not one-per-app, because these are throwaway POC apps with no independent release cadence — delete this whole repo once the mesh decision is validated and the real `XConnection` platform work begins.
+One repo, not one-per-app, because these are throwaway POC apps with no independent release cadence — delete this whole repo once the mesh decision is validated and the real `Connection` platform work begins.
 
 | App | Role |
 |---|---|

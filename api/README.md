@@ -26,4 +26,4 @@ Upstream POC API for the platform-connections mesh test — serves protected dat
 
 ## Deployment
 
-POC — deployed as a plain manifest in the `poc-api` namespace, not yet as an `XApi` instance. Image: `ghcr.io/cujarrett/platform-connections-demo-api`. ARM64.
+POC — deployed as a plain manifest in the `poc-api` namespace, not yet as an `Api` instance. Image: `ghcr.io/cujarrett/platform-connections-demo-api`. ARM64.

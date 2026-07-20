@@ -29,4 +29,4 @@ Generic caller POC app for the platform-connections mesh test — calls `api` in
 
 ## Deployment
 
-POC — deployed as a plain manifest in the `poc-caller` namespace (twice: `authorized-caller` and `unauthorized-caller`), not yet as `XApi` instances. Image: `ghcr.io/cujarrett/platform-connections-demo-caller`. ARM64.
+POC — deployed as a plain manifest in the `poc-caller` namespace (twice: `authorized-caller` and `unauthorized-caller`), not yet as `Api` instances. Image: `ghcr.io/cujarrett/platform-connections-demo-caller`. ARM64.
