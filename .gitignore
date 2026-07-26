@@ -3,7 +3,7 @@
 
 # Compiled binaries (just build -o <name>)
 /api/api
-/caller/caller
+/downstream/downstream
 
 # Binaries for programs and plugins
 *.exe

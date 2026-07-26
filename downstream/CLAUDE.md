@@ -19,9 +19,9 @@ Before telling the user to commit, always run `/pre-commit-review`. It checks fo
 - **DRY is not a law.** A little copy-paste beats a complex abstraction built for two cases.
 - **No FOLD** (Fear Of Looking Dumb). If something is too complex, say so. That's a signal to simplify, not a personal failing.
 
-# caller
+# downstream
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo — proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-caller`, `unauthorized-caller`) to prove enforcement is identity-based, not code-based.
+Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo — proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
 
 ## Commands
 | Command | What it does |

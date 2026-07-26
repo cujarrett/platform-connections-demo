@@ -1,13 +1,13 @@
-name: caller
+name: downstream
 
 on:
   push:
     branches: [main]
     paths:
-      - 'caller/**'
+      - 'downstream/**'
   pull_request:
     paths:
-      - 'caller/**'
+      - 'downstream/**'
   workflow_dispatch:
 
 jobs:
@@ -18,14 +18,14 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version-file: caller/go.mod
+          go-version-file: downstream/go.mod
 
       - name: Test
-        working-directory: caller
+        working-directory: downstream
         run: go test ./...
 
       - name: Lint
-        working-directory: caller
+        working-directory: downstream
         run: go vet ./...
 
   build-and-push:
@@ -56,9 +56,9 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: caller
+          context: downstream
           platforms: linux/arm64
           push: true
           tags: |
-            ghcr.io/cujarrett/platform-connections-demo-caller:latest
-            ghcr.io/cujarrett/platform-connections-demo-caller:sha-${{ github.sha }}
+            ghcr.io/cujarrett/platform-connections-demo-downstream:latest
+            ghcr.io/cujarrett/platform-connections-demo-downstream:sha-${{ github.sha }}

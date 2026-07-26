@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/pre-commit-review`. It checks fo
 
 # api
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test (see `docs/platform-connections.md` in the homelab repo) — the protected upstream service that `authorized-caller` and `unauthorized-caller` call.
+Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test (see `docs/platform-connections.md` in the homelab repo) — the protected upstream service that `authorized-api` and `unauthorized-api` call.
 
 ## Commands
 | Command | What it does |

@@ -40,9 +40,11 @@ func main() {
 		port = "8080"
 	}
 
+	// Platform convention: reach another app at <app>.<namespace>.svc.cluster.local.
+	// Nothing injects this — the name is deterministic, so there is no URL to declare.
 	apiURL := os.Getenv("API_URL")
 	if apiURL == "" {
-		apiURL = "http://api.poc-api.svc.cluster.local:8080/api/v1/data"
+		apiURL = "http://upstream-api.platform-connections-demo.svc.cluster.local/api/v1/data"
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))

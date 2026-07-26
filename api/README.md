@@ -1,6 +1,6 @@
 # api
 
-Upstream POC API for the platform-connections mesh test — serves protected data that only `authorized-caller` should be able to reach. See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo.
+Upstream POC API for the platform-connections mesh test — serves protected data that only `authorized-api` should be able to reach. See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo.
 
 ## Commands
 
@@ -26,4 +26,4 @@ Upstream POC API for the platform-connections mesh test — serves protected dat
 
 ## Deployment
 
-POC — deployed as a plain manifest in the `poc-api` namespace, not yet as an `Api` instance. Image: `ghcr.io/cujarrett/platform-connections-demo-api`. ARM64.
+POC — deployed as a plain manifest in the `platform-connections-demo` namespace, not yet as an `Api` instance. Image: `ghcr.io/cujarrett/platform-connections-demo-api`. ARM64.

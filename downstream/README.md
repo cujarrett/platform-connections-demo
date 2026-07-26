@@ -1,6 +1,6 @@
-# caller
+# downstream
 
-Generic caller POC app for the platform-connections mesh test — calls `api` internally and both a registered and an unregistered external FQDN. Identity-agnostic by design: the same image is deployed twice, once as `authorized-caller` (allowed) and once as `unauthorized-caller` (denied) — the difference is the service account each instance runs as, not the code. See `docs/platform-connections.md` in the homelab repo.
+Generic downstream POC app for the platform-connections mesh test — calls `api` internally and both a registered and an unregistered external FQDN. Identity-agnostic by design: the same image is deployed twice, once as `authorized-api` (allowed) and once as `unauthorized-api` (denied) — the difference is the service account each instance runs as, not the code. See `docs/platform-connections.md` in the homelab repo.
 
 ## Commands
 
@@ -29,4 +29,4 @@ Generic caller POC app for the platform-connections mesh test — calls `api` in
 
 ## Deployment
 
-POC — deployed as a plain manifest in the `poc-caller` namespace (twice: `authorized-caller` and `unauthorized-caller`), not yet as `Api` instances. Image: `ghcr.io/cujarrett/platform-connections-demo-caller`. ARM64.
+POC — deployed as a plain manifest in the `platform-connections-demo` namespace (twice: `authorized-api` and `unauthorized-api`), not yet as `Api` instances. Image: `ghcr.io/cujarrett/platform-connections-demo-downstream`. ARM64.

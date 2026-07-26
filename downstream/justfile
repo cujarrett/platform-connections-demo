@@ -16,7 +16,7 @@ test:
 
 # Build binary
 build:
-    go build -o caller .
+    go build -o downstream .
 
 # Run locally
 run:
