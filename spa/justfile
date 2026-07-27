@@ -1,0 +1,49 @@
+# List available recipes
+default:
+    @just --list
+
+# Port-forward the demo APIs and serve the SPA against the real cluster.
+# Use this rather than `npm start` — without the forwards every call returns 500.
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for port in 4200 18081 18082; do
+        if lsof -ti:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "port $port is already in use — run 'just stop' first" >&2
+            exit 1
+        fi
+    done
+    kubectl port-forward svc/authorized-api 18081:80 -n platform-connections-demo >/dev/null &
+    forward_authorized=$!
+    kubectl port-forward svc/unauthorized-api 18082:80 -n platform-connections-demo >/dev/null &
+    forward_unauthorized=$!
+    # Kill only what this recipe started, so a failure here cannot take out the shell.
+    trap 'kill $forward_authorized $forward_unauthorized 2>/dev/null || true' EXIT
+    sleep 3
+    npm start
+
+# Stop anything left behind by a previous `just dev`
+stop:
+    -@pkill -f "ng serve" 2>/dev/null || true
+    -@pkill -f "port-forward svc/authorized-api" 2>/dev/null || true
+    -@pkill -f "port-forward svc/unauthorized-api" 2>/dev/null || true
+    @echo "stopped"
+
+# Install dependencies
+install:
+    npm ci
+
+# Run all CI checks locally before pushing
+ci: lint build
+
+# Type-check without emitting
+lint:
+    npm run lint
+
+# Production build
+build:
+    npm run build
+
+# Format sources
+format:
+    npm run format

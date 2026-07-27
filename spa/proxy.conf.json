@@ -1,0 +1,14 @@
+{
+  "/authorized": {
+    "target": "http://localhost:18081",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/authorized": "" }
+  },
+  "/unauthorized": {
+    "target": "http://localhost:18082",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/unauthorized": "" }
+  }
+}
