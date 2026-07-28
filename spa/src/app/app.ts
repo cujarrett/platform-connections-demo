@@ -30,9 +30,9 @@ interface Result {
         <h1>Platform Engineering: Connections</h1>
         <p class="lede">Kubernetes runs the workloads. Service Mesh decides which calls get through.</p>
         <p class="sub">
-          Four live examples, run against my
+          Four live examples, run against
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
-            >Kubernetes bookshelf cluster</a
+            >my Kubernetes bookshelf cluster</a
           >.
         </p>
       </header>
