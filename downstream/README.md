@@ -1,6 +1,6 @@
 # downstream
 
-Generic downstream POC app for the platform-connections mesh test — calls `api` internally and both a registered and an unregistered external FQDN. Identity-agnostic by design: the same image is deployed twice, once as `authorized-api` (allowed) and once as `unauthorized-api` (denied) — the difference is the service account each instance runs as, not the code. See `docs/platform-connections.md` in the homelab repo.
+Generic downstream POC app for the platform-connections mesh test — calls `api` internally and both a registered and an unregistered external FQDN. Identity-agnostic by design: the same image is deployed twice, once as `authorized-api` (allowed) and once as `unauthorized-api` (denied) — the difference is the service account each instance runs as, not the code. See `docs/platform-engineering-connections.md` in the homelab repo.
 
 ## Commands
 

@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/pre-commit-review`. It checks fo
 
 # downstream
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [docs/platform-connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo — proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
+Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo — proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
 
 ## Commands
 | Command | What it does |

@@ -32,8 +32,8 @@ const API_COMPOSITION = {
   url: `${HOMELAB}/platform/api/composition.yaml`,
 }
 const DESIGN_DOC = {
-  label: "Platform Connections — design & build plan",
-  url: `${HOMELAB}/docs/platform-connections.md`,
+  label: "Service Mesh — design & build plan",
+  url: `${HOMELAB}/docs/platform-engineering-connections.md`,
 }
 
 export const CASES: Case[] = [

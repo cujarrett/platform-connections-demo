@@ -1,6 +1,6 @@
 # platform-connections-demo
 
-Demo apps behind [Platform Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo.
+Demo apps behind [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo.
 
 Three apps in one namespace. Two of them run a byte-identical image and differ only in what they declare — which is the whole point.
 
