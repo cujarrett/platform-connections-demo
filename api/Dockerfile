@@ -7,5 +7,5 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o api .
 
 FROM gcr.io/distroless/static:nonroot
 COPY --from=builder /app/api /api
-EXPOSE 8080
+EXPOSE 8080 9090
 ENTRYPOINT ["/api"]

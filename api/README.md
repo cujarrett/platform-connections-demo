@@ -17,12 +17,14 @@ Upstream POC API for the platform-connections mesh test — serves protected dat
 |---|---|---|
 | `GET` | `/healthz` | Liveness probe |
 | `GET` | `/api/v1/data` | Protected data — proves ingress registration + mTLS |
+| `GET` | `/metrics` | Prometheus metrics on `METRICS_PORT` — build info and a count of protected reads served |
 
 ## Environment variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `PORT` | No | `8080` | HTTP listen port |
+| `METRICS_PORT` | No | `9090` | Prometheus listen port — separate from `PORT` so the app port stays identity-enforced |
 
 ## Deployment
 

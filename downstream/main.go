@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
+	"sync"
 	"time"
 )
 
@@ -34,6 +36,82 @@ var httpClient = &http.Client{
 	},
 }
 
+// callKey labels one counter series. The label set is fixed and tiny — three targets,
+// four outcomes — so a plain map under a mutex is enough.
+type callKey struct {
+	target  string
+	outcome string
+}
+
+var (
+	callsMu sync.Mutex
+	calls   = map[callKey]int64{}
+)
+
+func record(target, outcome string) {
+	callsMu.Lock()
+	defer callsMu.Unlock()
+	calls[callKey{target, outcome}]++
+}
+
+// outcome maps an upstream status onto the thing the demo is actually showing —
+// 403 is how the mesh refuses an undeclared caller.
+func outcome(status int) string {
+	switch {
+	case status >= 200 && status < 300:
+		return "ok"
+	case status == http.StatusForbidden:
+		return "denied"
+	default:
+		return "error"
+	}
+}
+
+func metricsServer(port string) *http.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /metrics", metricsHandler)
+	return &http.Server{
+		Addr:              ":" + port,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+}
+
+// metricsHandler serves Prometheus text format. The platform scrapes every Api, so
+// this route must exist even though the sidecar already reports request rates.
+func metricsHandler(w http.ResponseWriter, _ *http.Request) {
+	callsMu.Lock()
+	keys := make([]callKey, 0, len(calls))
+	for k := range calls {
+		keys = append(keys, k)
+	}
+	snapshot := make(map[callKey]int64, len(calls))
+	for k, v := range calls {
+		snapshot[k] = v
+	}
+	callsMu.Unlock()
+
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].target != keys[j].target {
+			return keys[i].target < keys[j].target
+		}
+		return keys[i].outcome < keys[j].outcome
+	})
+
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	fmt.Fprintf(w, "# HELP demo_downstream_build_info Build information for this service.\n")         //nolint:errcheck
+	fmt.Fprintf(w, "# TYPE demo_downstream_build_info gauge\n")                                       //nolint:errcheck
+	fmt.Fprintf(w, "demo_downstream_build_info{version=%q} 1\n", version)                             //nolint:errcheck
+	fmt.Fprintf(w, "# HELP demo_downstream_calls_total Outbound calls by destination and outcome.\n") //nolint:errcheck
+	fmt.Fprintf(w, "# TYPE demo_downstream_calls_total counter\n")                                    //nolint:errcheck
+	for _, k := range keys {
+		fmt.Fprintf(w, "demo_downstream_calls_total{target=%q,outcome=%q} %d\n", k.target, k.outcome, snapshot[k]) //nolint:errcheck
+	}
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -47,13 +125,21 @@ func main() {
 		apiURL = "http://upstream-api.platform-connections-demo.svc.cluster.local/api/v1/data"
 	}
 
+	// Metrics live on their own port. Sharing the app port would force the platform to
+	// mark that port identity-free so Prometheus can scrape it, which would undo the
+	// connection enforcement this demo exists to show.
+	metricsPort := os.Getenv("METRICS_PORT")
+	if metricsPort == "" {
+		metricsPort = "9090"
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /api/call", callHandler(apiURL))
-	mux.HandleFunc("GET /api/weather", proxyHandler(weatherURL))
-	mux.HandleFunc("GET /api/leak", proxyHandler(leakURL))
+	mux.HandleFunc("GET /api/weather", proxyHandler("weather", weatherURL))
+	mux.HandleFunc("GET /api/leak", proxyHandler("leak", leakURL))
 	mux.HandleFunc("/", notFoundHandler)
 
 	srv := &http.Server{
@@ -64,6 +150,8 @@ func main() {
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
+
+	metricsSrv := metricsServer(metricsPort)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -76,8 +164,19 @@ func main() {
 		}
 	}()
 
+	go func() {
+		logger.Info("metrics listening", "port", metricsPort)
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("metrics server error", "err", err)
+			os.Exit(1)
+		}
+	}()
+
 	<-ctx.Done()
 	logger.Info("shutting down")
+	if err := metricsSrv.Shutdown(context.Background()); err != nil {
+		logger.Error("metrics shutdown error", "err", err)
+	}
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logger.Error("shutdown error", "err", err)
 	}
@@ -85,12 +184,13 @@ func main() {
 
 // callHandler proxies to the internal `api` service — proves internal registration + mTLS.
 func callHandler(target string) http.HandlerFunc {
-	return proxyHandler(target)
+	return proxyHandler("upstream-api", target)
 }
 
 // proxyHandler forwards the request to target and relays the result, for exercising
-// both internal (mTLS) and external (ServiceEntry) connection registration.
-func proxyHandler(target string) http.HandlerFunc {
+// both internal (mTLS) and external (ServiceEntry) connection registration. name is
+// the metrics label for the destination.
+func proxyHandler(name, target string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
 		if err != nil {
@@ -100,10 +200,14 @@ func proxyHandler(target string) http.HandlerFunc {
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
+			// The connection never completed. A REGISTRY_ONLY block on an unregistered
+			// external destination lands here, not on an HTTP status.
+			record(name, "unreachable")
 			slog.Warn("upstream call failed", "target", target, "err", err)
 			writeJSONError(w, "upstream call failed", http.StatusBadGateway)
 			return
 		}
+		record(name, outcome(resp.StatusCode))
 		defer resp.Body.Close() //nolint:errcheck
 
 		body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))

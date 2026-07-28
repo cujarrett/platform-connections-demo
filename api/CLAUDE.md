@@ -36,6 +36,7 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 |---|---|---|
 | GET | `/healthz` | Liveness probe |
 | GET | `/api/v1/data` | Protected data |
+| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) — the platform scrapes every Api, so this route is required |
 
 ## Conventions
 - No frameworks — stdlib `net/http` only

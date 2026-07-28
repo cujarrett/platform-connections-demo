@@ -19,12 +19,16 @@ Generic downstream POC app for the platform-connections mesh test — calls `api
 | `GET` | `/api/call` | Calls `api`'s `/api/v1/data` — proves internal registration + mTLS |
 | `GET` | `/api/weather` | Calls `api.open-meteo.com` — a **registered** external FQDN, proves `ServiceEntry` allow |
 | `GET` | `/api/leak` | Calls `example.com` — an **unregistered** external FQDN, must be blocked by `REGISTRY_ONLY` |
+| `GET` | `/metrics` | Prometheus metrics on `METRICS_PORT` — build info and `demo_downstream_calls_total{target,outcome}` |
+
+`demo_downstream_calls_total` is where enforcement becomes visible. `outcome` is one of `ok` (2xx), `denied` (the mesh refused an undeclared caller with 403), `unreachable` (the connection never completed, which is how a `REGISTRY_ONLY` block on an unregistered destination shows up), or `error` (any other status).
 
 ## Environment variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `PORT` | No | `8080` | HTTP listen port |
+| `METRICS_PORT` | No | `9090` | Prometheus listen port — separate from `PORT` so the app port stays identity-enforced |
 | `API_URL` | No | `http://api.poc-api.svc.cluster.local:8080/api/v1/data` | Internal `api` service endpoint to call |
 
 ## Deployment

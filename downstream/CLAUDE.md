@@ -38,6 +38,7 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 | GET | `/api/call` | Calls `api` internally |
 | GET | `/api/weather` | Calls a registered external FQDN (`api.open-meteo.com`) |
 | GET | `/api/leak` | Calls an unregistered external FQDN (`example.com`) — must fail once `REGISTRY_ONLY` is enforced |
+| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) — the platform scrapes every Api, so this route is required |
 
 ## Conventions
 - No frameworks — stdlib `net/http` only
