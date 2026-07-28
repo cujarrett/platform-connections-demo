@@ -62,3 +62,23 @@ jobs:
           tags: |
             ghcr.io/cujarrett/platform-connections-demo-downstream:latest
             ghcr.io/cujarrett/platform-connections-demo-downstream:sha-${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    # One image, two XR instances. max-parallel keeps the two commits from racing
+    # each other on the same branch.
+    strategy:
+      max-parallel: 1
+      matrix:
+        file:
+          - platform-connections-demo/authorized-api.yaml
+          - platform-connections-demo/unauthorized-api.yaml
+    uses: cujarrett/homelab-workspaces/.github/workflows/update-image-tag.yml@main
+    with:
+      # image must be set — the default derives from the repo name, and this repo
+      # builds three differently-named images out of one tree.
+      image: ghcr.io/cujarrett/platform-connections-demo-downstream
+      file: ${{ matrix.file }}
+    secrets:
+      homelab_pat: ${{ secrets.HOMELAB_PAT }}

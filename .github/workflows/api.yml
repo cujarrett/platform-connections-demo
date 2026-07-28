@@ -62,3 +62,15 @@ jobs:
           tags: |
             ghcr.io/cujarrett/platform-connections-demo-api:latest
             ghcr.io/cujarrett/platform-connections-demo-api:sha-${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    uses: cujarrett/homelab-workspaces/.github/workflows/update-image-tag.yml@main
+    with:
+      # image must be set — the default derives from the repo name, and this repo
+      # builds three differently-named images out of one tree.
+      image: ghcr.io/cujarrett/platform-connections-demo-api
+      file: platform-connections-demo/upstream-api.yaml
+    secrets:
+      homelab_pat: ${{ secrets.HOMELAB_PAT }}
