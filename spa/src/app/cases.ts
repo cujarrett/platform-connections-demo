@@ -16,9 +16,9 @@ export interface Case {
     why: string
   }
   deep: string
-  downstream: string
-  upstream: string
-  yaml: string
+  downstream?: string
+  upstream?: string
+  yaml?: string
   /** The real files behind the snippet — the declaration, and what renders it. */
   sources: { label: string; url: string }[]
 }
@@ -162,24 +162,21 @@ consumes:
   },
   {
     kind: "where this stops",
-    title: "This answers which workload, not which person",
+    title: "Platform Connections stops at workload authorization",
     grug:
-      "Every call above was decided by which pod was calling. None of it knows anything about a user.",
-    deep: `<p><b>What is settled:</b> a workload's identity is a certificate it cannot forge, and every call is refused unless something declared it. That holds whether or not a user is ever involved.</p>
-<p><b>What is missing:</b> a signed-in person, and what they are allowed to do. An API open to a calling workload is open to <b>every</b> request that workload sends, no matter who triggered it.</p>
-<p><b>How it attaches:</b> the same <code>AuthorizationPolicy</code> rule that already matches the workload gains a <code>when:</code> clause matching a claim in the user's token. One rule, two conditions, both must hold — it has to be the same rule, because two separate ALLOW policies are OR'd together and would <b>widen</b> access instead of narrowing it.</p>`,
-    downstream:
-      "Would carry the user's token onward. The mesh does not forward it across a hop by itself.",
-    upstream: "Same policy object, one clause richer. Nothing already declared has to be redone.",
-    yaml: `rules:
-  - from:
-      - source:
-          principals: ["…/sa/authorized-api"]
-    # ↑ which workload — enforced today
-    when:
-      - key: request.auth.claims[roles]
-        values: ["collection.reader"]
-    # ↑ which person — added later`,
+      "Every call above was decided by which pod was calling. Never by who was using it.",
+    deep: `<p class="answers"><b>It answers</b></p>
+<ul>
+  <li>Can this workload call that workload?</li>
+  <li>Can this workload reach this database?</li>
+  <li>Can this workload use this bucket?</li>
+</ul>
+<p class="answers"><b>It does not answer</b></p>
+<ul class="not">
+  <li>Can Alice view Order 123?</li>
+  <li>Can Bob approve payroll?</li>
+</ul>
+<p>Those last two are about a person and a particular record. Nothing here knows either — that is a separate layer, deliberately.</p>`,
     sources: [DESIGN_DOC],
   },
 ]

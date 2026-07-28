@@ -119,19 +119,21 @@ pre code {
   text-wrap: balance;
 }
 
-.brand {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  margin-bottom: 1rem;
-}
-
 .hero .sub {
   color: var(--color-text-muted);
   font-size: 0.9rem;
   margin-top: 0.7rem;
+}
+.hero .sub a {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border);
+  transition: color 0.15s;
+}
+.hero .sub a:hover {
+  color: var(--color-accent);
+  text-decoration-color: var(--color-accent);
 }
 
 .lede {
@@ -605,26 +607,7 @@ summary::-webkit-details-marker {
 summary:hover {
   color: var(--color-accent);
 }
-summary:hover .sum-tag {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-.sum-tag {
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 100px;
-  padding: 0.12rem 0.5rem;
-  transition:
-    border-color 0.15s,
-    color 0.15s;
-}
-
-.sum-chev {
+summary:hover .sum-chev {
   margin-left: auto;
   font-size: 1.1rem;
   line-height: 1;
@@ -640,8 +623,25 @@ details[open] .sum-chev {
   margin-top: 0.85rem;
   color: var(--color-text-muted);
 }
+/* Shown without a summary above it, so it supplies its own separation. */
+.card > .deep {
+  margin-top: 0;
+}
 .deep p {
   margin: 0.55rem 0;
+}
+.deep p.answers {
+  margin-bottom: 0.3rem;
+}
+.deep ul {
+  margin: 0 0 0.9rem 1.1rem;
+  padding: 0;
+}
+.deep li {
+  margin: 0.15rem 0;
+}
+.deep ul.not li {
+  color: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-error));
 }
 .deep b {
   color: var(--color-text);

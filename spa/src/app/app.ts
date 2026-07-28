@@ -7,6 +7,7 @@ import {
   inject,
 } from "@angular/core"
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser"
+import { NgTemplateOutlet } from "@angular/common"
 import { CASES, Case } from "./cases"
 import { highlightYaml } from "./yaml-highlight"
 
@@ -19,16 +20,21 @@ interface Result {
 
 @Component({
   selector: "app-root",
+  imports: [NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scroll-progress" [style.width.%]="progress()"></div>
 
     <div class="page">
       <header class="hero">
-        <div class="brand">Platform Connections</div>
-        <h1>How one service calls another</h1>
+        <h1>Platform Engineering: Connections</h1>
         <p class="lede">Kubernetes runs the workloads. Service Mesh decides which calls get through.</p>
-        <p class="sub">Four live examples, run against the real cluster.</p>
+        <p class="sub">
+          Four live examples, run against my
+          <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
+            >Kubernetes bookshelf cluster</a
+          >.
+        </p>
       </header>
 
       @for (c of cases; track c.title; let i = $index) {
@@ -119,32 +125,43 @@ interface Result {
               </div>
             }
 
-            <details [open]="!c.call">
-              <summary>
-                <span class="sum-text">{{ detailPrompt(i) }}</span>
-                <span class="sum-tag">for platform engineers</span>
-                <span class="sum-chev">›</span>
-              </summary>
+            <ng-template #detail>
               <div class="deep">
                 <div [innerHTML]="html(c.deep)"></div>
-                <div class="sides">
-                  <div>
-                    <div class="h">on the downstream pod</div>
-                    <div [innerHTML]="html(c.downstream)"></div>
+                @if (c.downstream && c.upstream) {
+                  <div class="sides">
+                    <div>
+                      <div class="h">on the downstream pod</div>
+                      <div [innerHTML]="html(c.downstream)"></div>
+                    </div>
+                    <div>
+                      <div class="h">on the upstream side</div>
+                      <div [innerHTML]="html(c.upstream)"></div>
+                    </div>
                   </div>
-                  <div>
-                    <div class="h">on the upstream side</div>
-                    <div [innerHTML]="html(c.upstream)"></div>
-                  </div>
-                </div>
-                <pre><code [innerHTML]="yaml(c.yaml)"></code></pre>
+                }
+                @if (c.yaml; as y) {
+                  <pre><code [innerHTML]="yaml(y)"></code></pre>
+                }
                 <div class="sources">
                   @for (src of c.sources; track src.url) {
                     <a [href]="src.url" target="_blank" rel="noopener">{{ src.label }} ↗</a>
                   }
                 </div>
               </div>
-            </details>
+            </ng-template>
+
+            @if (c.call) {
+              <details>
+                <summary>
+                  <span class="sum-text">{{ detailPrompt(i) }}</span>
+                  <span class="sum-chev">›</span>
+                </summary>
+                <ng-container [ngTemplateOutlet]="detail" />
+              </details>
+            } @else {
+              <ng-container [ngTemplateOutlet]="detail" />
+            }
           </div>
         </section>
       }
@@ -185,9 +202,13 @@ export class App {
     return `HTTP ${r.code}`
   }
 
-  /** Bodies are short except the weather payload, which only needs its shape shown. */
+  /**
+   * Cloudflare replaces 5xx bodies from the origin with its own HTML error page, which
+   * says nothing. Only the app's or Envoy's own words are worth showing.
+   */
   responseBody(i: number): string {
     const body = this.results()[i].body
+    if (/^\s*<(!doctype|html)/i.test(body)) return "(origin error page — no body from the app)"
     return body.length > 96 ? body.slice(0, 96) + " …" : body
   }
 
