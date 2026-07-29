@@ -18,7 +18,10 @@ export interface Case {
   deep: string
   downstream?: string
   upstream?: string
+  /** What the team writes. */
   yaml?: string
+  /** What the platform renders from it, in Istio's own words. */
+  istio?: string
   /** The real files behind the snippet — the declaration, and what renders it. */
   sources: { label: string; url: string }[]
 }
@@ -65,6 +68,32 @@ provides:
       - namespace: platform-connections-demo
         app: authorized-api
 # unauthorized-api is absent, so it is denied`,
+    istio: `# both land on upstream-api's own pod
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: upstream-api
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/instance: upstream-api }
+  mtls:
+    mode: STRICT   # no certificate, no conversation
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: upstream-api
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/instance: upstream-api }
+  action: ALLOW
+  rules:
+    # provides: data
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
+# unauthorized-api names no rule, and ALLOW makes the rest a wall`,
     sources: [
       { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
       API_COMPOSITION,
@@ -97,6 +126,23 @@ provides:
       # ↓ the whole difference
       - namespace: platform-connections-demo
         app: authorized-api`,
+    istio: `# the same object as the previous call, unchanged
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: upstream-api
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/instance: upstream-api }
+  action: ALLOW
+  rules:
+    # provides: data
+    - from:
+        - source:
+            principals:
+              # ↓ the identity the caller proved with its certificate
+              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
+# no methods and no paths, so the grant covers the whole API`,
     sources: [
       { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
       API_COMPOSITION,
@@ -126,6 +172,22 @@ provides:
 consumes:
   - host: api.open-meteo.com
 # example.com is absent, so it is unreachable`,
+    istio: `# lands on authorized-api's own pod
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  workloadSelector:
+    labels: { app.kubernetes.io/instance: authorized-api }
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY   # unknown address means no address
+  egress:
+    - hosts:
+        - "./*.svc.cluster.local"   # its own namespace
+        - "istio-system/*"          # the control plane
+        - "./api.open-meteo.com"    # the one host it declared
+# example.com is on no list, so the sidecar has nowhere to send it`,
     sources: [
       { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
       API_COMPOSITION,
@@ -155,6 +217,33 @@ consumes:
 consumes:
   - host: api.open-meteo.com
 # declared, so this one is reachable`,
+    istio: `# both land on authorized-api's own pod
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: authorized-api-api-open-meteo-com
+spec:
+  hosts:
+    - "api.open-meteo.com"
+  location: MESH_EXTERNAL
+  resolution: DNS
+  exportTo: ["."]        # this namespace only
+  ports:
+    - number: 443
+      name: tls
+      protocol: TLS      # the app's own TLS passes straight through
+---
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  egress:
+    - hosts:
+        - "./*.svc.cluster.local"
+        - "istio-system/*"
+        - "./api.open-meteo.com"   # known is not enough — this line permits it
+# the entry makes the host known, the egress line makes it this pod's to reach`,
     sources: [
       { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
       API_COMPOSITION,

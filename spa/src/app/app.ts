@@ -141,7 +141,12 @@ interface Result {
                   </div>
                 }
                 @if (c.yaml; as y) {
+                  <div class="yaml-h">what the team writes</div>
                   <pre><code [innerHTML]="yaml(y)"></code></pre>
+                }
+                @if (c.istio; as policy) {
+                  <div class="yaml-h">what the platform renders — istio</div>
+                  <pre><code [innerHTML]="yaml(policy)"></code></pre>
                 }
                 <div class="sources">
                   @for (src of c.sources; track src.url) {

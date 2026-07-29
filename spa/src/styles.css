@@ -685,6 +685,19 @@ details[open] .sum-chev {
   color: var(--color-text);
 }
 
+/* Sits directly on the snippet it names, so the pre below drops its own top margin. */
+.yaml-h {
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 0.95rem;
+  color: var(--color-text-muted);
+}
+.yaml-h + pre {
+  margin-top: 0.3rem;
+}
+
 .sides .h {
   font-size: 0.62rem;
   letter-spacing: 0.07em;
