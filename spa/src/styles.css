@@ -722,4 +722,38 @@ details[open] .sum-chev {
     width: 2px;
     margin: 0 auto;
   }
+
+  /* The row stacks here, so the widths that stop the desktop row from shifting
+     buy nothing and read as holes beside the status. */
+  .res {
+    gap: 0.55rem 0.7rem;
+    margin-top: 0.85rem;
+    padding-top: 0.8rem;
+  }
+  .req {
+    flex-basis: 100%;
+  }
+  .outcome {
+    flex: 1;
+  }
+  .status,
+  .ms {
+    min-width: 0;
+    text-align: left;
+  }
+  button.run,
+  button.run.primary {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Reserving room for an answer costs more than the shift it prevents once the
+     card is taller than the screen — empty, it is a third of the card. */
+  .body-slot,
+  .why-slot {
+    min-height: 0;
+  }
+  .body-slot {
+    margin-top: 0.4rem;
+  }
 }
