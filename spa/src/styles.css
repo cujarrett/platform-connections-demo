@@ -489,6 +489,14 @@ button.run {
   justify-content: center;
 }
 
+/* Answered, so it stops competing with the verdict — but a transparent button on
+   a dark card reads as absent, so it keeps a surface of its own. */
+button.run:not(.primary) {
+  background: var(--color-surface-alt);
+  border-color: color-mix(in srgb, var(--color-border) 55%, var(--color-text-muted));
+  color: var(--color-text);
+}
+
 /* Unrun calls get a bigger, breathing button; once answered it recedes. */
 button.run.primary {
   min-width: 9.2rem;
@@ -527,6 +535,10 @@ button.primary:hover:not(:disabled) {
 button:hover:not(:disabled) {
   border-color: var(--color-text-muted);
   color: var(--color-text);
+}
+button.run:not(.primary):hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-alt));
 }
 button:disabled {
   opacity: 0.45;
