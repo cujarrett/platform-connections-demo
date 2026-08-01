@@ -36,7 +36,7 @@ const API_COMPOSITION = {
 }
 const DESIGN_DOC = {
   label: "Service Mesh — design & build plan",
-  url: `${HOMELAB}/docs/platform-engineering-connections.md`,
+  url: `${HOMELAB}/docs/platform-connections.md`,
 }
 
 export const CASES: Case[] = [
@@ -184,7 +184,6 @@ spec:
     mode: REGISTRY_ONLY   # unknown address means no address
   egress:
     - hosts:
-        - "./*.svc.cluster.local"   # its own namespace
         - "istio-system/*"          # the control plane
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so the sidecar has nowhere to send it`,
@@ -240,12 +239,100 @@ metadata:
 spec:
   egress:
     - hosts:
-        - "./*.svc.cluster.local"
         - "istio-system/*"
         - "./api.open-meteo.com"   # known is not enough — this line permits it
 # the entry makes the host known, the egress line makes it this pod's to reach`,
     sources: [
       { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
+      API_COMPOSITION,
+    ],
+  },
+  {
+    kind: "on-platform → off-platform",
+    title: "A bound resource declares itself",
+    grug:
+      "The app writes an object to cloud storage, reads it back, then deletes it. It never declared the address — asking for the bucket was the declaration.",
+    call: {
+      from: "authorized-api",
+      to: "s3.amazonaws.com",
+      gate: "may I leave?",
+      url: "/authorized/api/storage",
+      enforcedAt: "downstream",
+      expect: 200,
+      request: "PutObject → GetObject → DeleteObject",
+      why: "<b>Allowed.</b> The bucket reference is what opened the path to it.",
+    },
+    deep: `<p>The two calls above needed a <code>consumes</code> entry because nothing else stated where they were going. This one does not. The app asked the platform for a bucket, and a bucket implies exactly one endpoint — so the platform registers it, the same way it registers a cache the app created itself.</p>
+<p><b>Three round trips are actually happening.</b> Before any of them, a sidecar exchanges this pod's identity certificate for temporary cloud credentials, which is a call to two more endpoints the app never named. All of it is refused unless registered, so the platform registers those too — miss them and the pod starts cleanly, then fails every call with no clue pointing at the mesh.</p>
+<p>Nothing durable is created: the object is written, read back to prove it arrived, and deleted before the response returns.</p>`,
+    downstream:
+      "<code>objectStorageRefs</code> → a <code>ServiceEntry</code> and egress entry per endpoint, plus the credential endpoints.",
+    upstream: "Nothing. Cloud storage runs no sidecar, so gates 3 and 4 do not exist for it.",
+    yaml: `# authorized-api — the caller
+objectStorageRefs:
+  - name: assets
+# no consumes entry for the endpoint — the ref is the declaration`,
+    istio: `# rendered from the ref alone
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  egress:
+    - hosts:
+        - "istio-system/*"
+        - "./rolesanywhere.us-east-1.amazonaws.com"  # credentials
+        - "./sts.us-east-1.amazonaws.com"            # credentials
+        - "./platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"
+        - "./s3.us-east-1.amazonaws.com"
+# one ServiceEntry per host, all from one line of YAML`,
+    sources: [
+      { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
+      { label: "assets.yaml — the bucket", url: `${WORKSPACES}/assets.yaml` },
+      API_COMPOSITION,
+    ],
+  },
+  {
+    kind: "on-platform → off-platform",
+    title: "The same holds for a database",
+    grug:
+      "Write an item, read it back, delete it. A different resource, a different endpoint, and again nothing was declared by hand.",
+    call: {
+      from: "authorized-api",
+      to: "dynamodb.amazonaws.com",
+      gate: "may I leave?",
+      url: "/authorized/api/table",
+      enforcedAt: "downstream",
+      expect: 200,
+      request: "PutItem → GetItem → DeleteItem",
+      why: "<b>Allowed.</b> Same mechanism as the bucket, a different endpoint.",
+    },
+    deep: `<p>This is the previous case with one word changed, which is the point. Every managed resource the platform offers resolves to an endpoint it already knows, so none of them belong in <code>consumes</code>.</p>
+<p>The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned for you, it can register for you — asking again would be asking for a fact it already holds.</p>
+<p>The read uses a consistent read, so the item cannot come back missing from a stale replica. A demo that fails one time in twenty teaches the wrong lesson.</p>`,
+    downstream: "<code>nosqlRef</code> → a <code>ServiceEntry</code> and egress entry for the database endpoint.",
+    upstream: "Nothing. The database runs no sidecar either.",
+    yaml: `# authorized-api — the caller
+nosqlRef:
+  name: records
+# again no consumes entry`,
+    istio: `apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: authorized-api-dynamodb-us-east-1-amazonaws-com
+spec:
+  hosts:
+    - "dynamodb.us-east-1.amazonaws.com"
+  location: MESH_EXTERNAL
+  resolution: DNS
+  exportTo: ["."]
+  ports:
+    - number: 443
+      name: tls
+      protocol: TLS`,
+    sources: [
+      { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
+      { label: "records.yaml — the table", url: `${WORKSPACES}/records.yaml` },
       API_COMPOSITION,
     ],
   },

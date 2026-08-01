@@ -140,6 +140,8 @@ func main() {
 	mux.HandleFunc("GET /api/call", callHandler(apiURL))
 	mux.HandleFunc("GET /api/weather", proxyHandler("weather", weatherURL))
 	mux.HandleFunc("GET /api/leak", proxyHandler("leak", leakURL))
+	mux.HandleFunc("GET /api/storage", storageHandler)
+	mux.HandleFunc("GET /api/table", tableHandler)
 	mux.HandleFunc("/", notFoundHandler)
 
 	srv := &http.Server{
