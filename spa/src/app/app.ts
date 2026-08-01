@@ -109,6 +109,9 @@ interface Result {
                   <span class="body-text" [class.denied]="verdict(i) === 'deny'">{{
                     responseBody(i)
                   }}</span>
+                  @if (isEnvoyBody(i)) {
+                    <span class="body-source">not JSON — Envoy wrote this, the app never ran</span>
+                  }
                 }
               </div>
 
@@ -211,6 +214,12 @@ export class App {
    * Cloudflare replaces 5xx bodies from the origin with its own HTML error page, which
    * says nothing. Only the app's or Envoy's own words are worth showing.
    */
+  // Envoy's RBAC filter answers with a fixed plain-text body. Every other body on this
+  // page is JSON from an app, so the format difference is the proof the app never ran.
+  isEnvoyBody(i: number): boolean {
+    return this.results()[i].body.trimStart().startsWith("RBAC:")
+  }
+
   responseBody(i: number): string {
     const body = this.results()[i].body
     if (/^\s*<(!doctype|html)/i.test(body)) return "(origin error page — no body from the app)"

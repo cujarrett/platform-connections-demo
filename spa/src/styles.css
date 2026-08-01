@@ -567,6 +567,14 @@ button:disabled {
 .body-text.denied {
   color: color-mix(in srgb, var(--color-error) 70%, var(--color-text));
 }
+/* The plain-text body is the evidence the request never reached the app. Say so, or a
+   reader assumes the API returned it and the format is just inconsistent. */
+.body-source {
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  white-space: nowrap;
+}
 
 .why-slot {
   /* Reserved so a finished call does not resize the card and move the page. */
