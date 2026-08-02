@@ -62,17 +62,24 @@ code {
   border-radius: 4px;
 }
 
+/* Scroll hint via background layers, not mask-image. A mask puts the element on its own
+   GPU layer, which Chrome colour-manages slightly differently from the root — a tall
+   block then shows as a faintly different shade of the same dark. It also faded the
+   right border, since a mask dims everything including chrome.
+   Here the fade is painted instead: the `local` layer scrolls with the content and the
+   `scroll` layer stays put, so the shadow only shows while there is more to the right. */
 pre {
-  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 0.8rem 1rem;
   overflow-x: auto;
-  /* Fades the right edge when a line does overflow, so a cut-off line reads as
-     scrollable rather than broken. */
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
-  font-size: 0.74rem;
-  line-height: 1.6;
+  background:
+    linear-gradient(to right, var(--color-bg), var(--color-bg)) 0 0 / 100% 100% local,
+    linear-gradient(to left, transparent, color-mix(in srgb, #000 55%, transparent))
+      right / 2rem 100% no-repeat scroll;
+  background-color: var(--color-bg);
+  font-size: 0.66rem;
+  line-height: 1.65;
   margin-top: 0.85rem;
 }
 pre code {
@@ -110,7 +117,9 @@ pre code {
 
 /* ── Layout ──────────────────────────────────────────────── */
 .page {
-  max-width: 63rem;
+  /* Wide enough that the longest rendered line — the SPIFFE principal — fits in a
+     half-width column without scrolling. Below this it wraps or scrolls. */
+  max-width: 72rem;
   margin: 0 auto;
   padding: 0 2rem 5rem;
 }
@@ -814,11 +823,11 @@ button:disabled {
   color: var(--color-text);
 }
 
-/* Same split as .case and .yaml-pair — one vertical line down the whole page. */
+/* Even halves, same as .yaml-pair below it — caller left, callee right. */
 .sides {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
-  gap: 2.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
   margin-top: 0.95rem;
 }
 .sides > div {
@@ -828,41 +837,34 @@ button:disabled {
   padding: 0.6rem 0.8rem;
   font-size: 0.82rem;
 }
-/* These get missed as bare text at the foot of a long panel, so they read as buttons:
-   own heading, bordered, and spaced away from the YAML above. */
+/* Same treatment as the hero link — underlined text, not a pill. Pills wrapped onto a
+   second row and read as buttons that do something, when these just navigate. The
+   heading is what keeps them from being missed. */
 .sources-h {
   margin-top: 1.5rem;
 }
 .sources {
   display: flex;
   flex-flow: row wrap;
-  gap: 0.5rem;
+  gap: 0.4rem 1.4rem;
   margin-top: 0.5rem;
 }
 .sources a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.76rem;
-  color: var(--color-text);
-  text-decoration: none;
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  border-radius: 100px;
-  padding: 0.3rem 0.8rem;
-  transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border);
+  transition: color 0.15s;
 }
 .sources a:hover {
   color: var(--color-accent);
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-alt));
+  text-decoration-color: var(--color-accent);
 }
 .sources a:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+  border-radius: 3px;
 }
 
 /* Sits directly on the snippet it names, so the pre below drops its own top margin. */
@@ -879,10 +881,13 @@ button:disabled {
 }
 
 /* Same two tracks as .case and .sides, so the split runs as one line down the page. */
+/* Even halves, matching .sides above. Left is always the caller, right is always the
+   callee, and content never crosses the middle — that mapping is the whole point of
+   putting the stack on a side, so it outranks giving the YAML more room. */
 .yaml-pair {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
-  gap: 2.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
   align-items: start;
 }
 /* Callee-owned by default — the wide right track, under the callee box above it. */
@@ -892,8 +897,9 @@ button:disabled {
 }
 /* Caller-owned: same tracks, but the stack moves to the left column and the wide track
    moves with it, so the rendered Istio keeps its room wherever it sits. */
+/* Same halves either way — only which one holds the stack changes. */
 .yaml-pair.owner-caller {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 .yaml-pair.owner-caller .yaml-stack {
   grid-column: 1;

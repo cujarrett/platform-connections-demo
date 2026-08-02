@@ -64,8 +64,8 @@ export const CASES: Case[] = [
       request: "GET upstream-api/api/v1/data",
       why: "<b>Allowed.</b> The caller's identity is named in the policy, so it passes.",
     },
-    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. This caller's identity appears in a rule, so the request passes.</p>
-<p>The grant is <b>coarse by default</b>: no methods or paths means the whole API. Narrow it only when one API has more than one trust boundary, such as <code>/public/</code> versus <code>/admin/</code>.</p>`,
+    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. This caller's identity is in a rule, so it passes.</p>
+<p>The grant is coarse by default: no methods or paths means the whole API. Narrow it only when one API has more than one trust boundary, such as <code>/public/</code> versus <code>/admin/</code>.</p>`,
     downstream:
       "Declares nothing. A caller needs no declaration to reach an app in its own namespace.",
     upstream:
@@ -96,7 +96,7 @@ spec:
               # no methods, no paths — the grant is the whole API`,
     sources: [
       { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      composition("the AuthorizationPolicy", "L740-L789"),
+      composition("AuthorizationPolicy", "L740-L789"),
     ],
   },
   {
@@ -154,7 +154,7 @@ spec:
 # unauthorized-api names no rule, and ALLOW makes the rest a wall`,
     sources: [
       { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      composition("PeerAuthentication + AuthorizationPolicy", "L716-L789"),
+      composition("PeerAuth + AuthorizationPolicy", "L716-L789"),
     ],
   },
   {
@@ -208,8 +208,8 @@ spec:
         - "./api.open-meteo.com"   # known is not enough — this line permits it
 # the entry makes the host known, the egress line makes it this pod's to reach`,
     sources: [
-      { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
-      composition("the Sidecar egress list", "L790-L828"),
+      { label: "authorized-api.yaml — the declaration", url: `${WORKSPACES}/authorized-api.yaml` },
+      composition("Sidecar egress list", "L790-L828"),
     ],
   },
   {
@@ -252,8 +252,8 @@ spec:
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so there is nowhere to send it`,
     sources: [
-      { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
-      composition("the Sidecar egress list", "L790-L828"),
+      { label: "authorized-api.yaml — the declaration", url: `${WORKSPACES}/authorized-api.yaml` },
+      composition("Sidecar egress list", "L790-L828"),
     ],
   },
   {
@@ -297,8 +297,8 @@ spec:
     sources: [
       { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
       { label: "assets.yaml — the bucket", url: `${WORKSPACES}/assets.yaml` },
-      composition("where the endpoints are derived", "L92-L111"),
-      composition("the ServiceEntry it renders", "L829-L852"),
+      composition("endpoint derivation", "L92-L111"),
+      composition("ServiceEntry", "L829-L852"),
     ],
   },
   {
@@ -342,8 +342,8 @@ spec:
     sources: [
       { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
       { label: "records.yaml — the table", url: `${WORKSPACES}/records.yaml` },
-      composition("where the endpoints are derived", "L92-L111"),
-      composition("the ServiceEntry it renders", "L829-L852"),
+      composition("endpoint derivation", "L92-L111"),
+      composition("ServiceEntry", "L829-L852"),
     ],
   },
   {
