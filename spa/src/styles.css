@@ -75,8 +75,8 @@ pre {
   overflow-x: auto;
   background:
     linear-gradient(to right, var(--color-bg), var(--color-bg)) 0 0 / 100% 100% local,
-    linear-gradient(to left, transparent, color-mix(in srgb, #000 55%, transparent))
-      right / 2rem 100% no-repeat scroll;
+    linear-gradient(to left, transparent, color-mix(in srgb, #000 55%, transparent)) right / 2rem
+      100% no-repeat scroll;
   background-color: var(--color-bg);
   font-size: 0.66rem;
   line-height: 1.65;
