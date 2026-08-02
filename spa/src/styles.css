@@ -866,15 +866,27 @@ button:disabled {
   margin-top: 0.3rem;
 }
 
-/* Declaration beside output, on the page's one vertical split. Same columns and gap
-   as .case so this gutter lands exactly under the narrative/card boundary — a second
-   split line a few pixels off reads as misalignment, not as a different section. */
+/* Same two tracks as .case and .sides, so the split runs as one line down the page. */
 .yaml-pair {
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
   gap: 2.5rem;
   align-items: start;
 }
+/* Callee-owned by default — the wide right track, under the callee box above it. */
+.yaml-stack {
+  grid-column: 2;
+  min-width: 0;
+}
+/* Caller-owned: same tracks, but the stack moves to the left column and the wide track
+   moves with it, so the rendered Istio keeps its room wherever it sits. */
+.yaml-pair.owner-caller {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+}
+.yaml-pair.owner-caller .yaml-stack {
+  grid-column: 1;
+}
+
 /* Each column scrolls its own long lines rather than widening the grid. */
 .yaml-col {
   min-width: 0;

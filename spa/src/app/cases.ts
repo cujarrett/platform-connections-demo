@@ -172,7 +172,7 @@ spec:
       request: "GET https://api.open-meteo.com/v1/forecast",
       why: "<b>Allowed.</b> Declaring the host is what makes it reachable.",
     },
-    deep: `<p>Declaring the host renders a <code>ServiceEntry</code>, putting it in this pod's registry, and adds it to the <code>Sidecar</code> egress list. Both are needed: the entry makes the address <b>known</b>, the egress line makes it <b>permitted for this workload specifically</b>.</p>
+    deep: `<p>Declaring the host renders a <code>ServiceEntry</code>, putting it in this pod's registry, and adds it to the <code>Sidecar</code> egress list. Both are needed: the entry makes the address known, the egress line makes it permitted for this workload specifically.</p>
 <p>That second part matters. A <code>ServiceEntry</code> is registered namespace-wide, so without the per-workload egress line a neighbour in the same namespace would inherit the ability to reach it.</p>`,
     downstream:
       "<code>consumes.host</code> → a <code>ServiceEntry</code> plus an egress entry, both scoped to this pod.",
@@ -273,9 +273,9 @@ spec:
       request: "PutObject → GetObject → DeleteObject",
       why: "<b>Allowed.</b> The bucket reference is what opened the path to it.",
     },
-    deep: `<p>An off-platform host normally needs a <code>consumes</code> entry, because nothing else states where the call is going. This one does not. The app asked the platform for a bucket, and a bucket implies exactly one endpoint — so the platform registers it, the same way it registers a cache the app created itself.</p>
-<p><b>Three round trips are actually happening.</b> Before any of them, a sidecar exchanges this pod's identity certificate for temporary cloud credentials, which is a call to two more endpoints the app never named. All of it is refused unless registered, so the platform registers those too — miss them and the pod starts cleanly, then fails every call with no clue pointing at the mesh.</p>
-<p>Nothing durable is created: the object is written, read back to prove it arrived, and deleted before the response returns.</p>`,
+    deep: `<p>Off-platform hosts normally go in <code>consumes</code>. This one does not. Asking for a bucket already names the endpoint, so the platform registers it — the same way it registers a cache the app made.</p>
+<p><b>There is a hidden call first.</b> Before touching the bucket, a sidecar trades this pod's certificate for temporary cloud credentials. That is two more endpoints the app never named, and unregistered means blackholed, so the platform registers those too. Miss them and the pod starts fine, then fails every call with nothing pointing at the mesh.</p>
+<p>Nothing is left behind: the object is written, read back to prove it arrived, then deleted.</p>`,
     downstream:
       "<code>objectStorageRefs</code> → a <code>ServiceEntry</code> and egress entry per endpoint, plus the credential endpoints.",
     upstream: "Nothing. Cloud storage is outside the mesh, so gates 3 and 4 do not exist for it.",

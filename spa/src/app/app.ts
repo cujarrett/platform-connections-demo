@@ -150,19 +150,25 @@ interface Result {
                 }
                 <!-- Side by side so the asymmetry is the point: a few lines declared,
                      all of that rendered. Stacks below the two-column breakpoint. -->
-                <div class="yaml-pair">
-                  @if (c.yaml; as y) {
-                    <div class="yaml-col">
-                      <div class="yaml-h">what the team writes</div>
-                      <pre><code [innerHTML]="yaml(y)"></code></pre>
-                    </div>
-                  }
-                  @if (c.istio; as policy) {
-                    <div class="yaml-col">
-                      <div class="yaml-h">what the platform renders — istio</div>
-                      <pre><code [innerHTML]="yaml(policy)"></code></pre>
-                    </div>
-                  }
+                <!-- Both blocks belong to the same pod: the file that declares it and the
+                     policy it renders land together. They sit on that pod's side, matching
+                     the diagram above — caller left, callee right. The other column stays
+                     empty on purpose; the box above it already says why. -->
+                <div class="yaml-pair" [class.owner-caller]="c.call?.enforcedAt === 'downstream'">
+                  <div class="yaml-stack">
+                    @if (c.yaml; as y) {
+                      <div class="yaml-col">
+                        <div class="yaml-h">what the team writes</div>
+                        <pre><code [innerHTML]="yaml(y)"></code></pre>
+                      </div>
+                    }
+                    @if (c.istio; as policy) {
+                      <div class="yaml-col">
+                        <div class="yaml-h">what the platform renders — istio</div>
+                        <pre><code [innerHTML]="yaml(policy)"></code></pre>
+                      </div>
+                    }
+                  </div>
                 </div>
                 <div class="sources">
                   @for (src of c.sources; track src.url) {
