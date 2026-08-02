@@ -28,7 +28,9 @@ interface Result {
     <div class="page">
       <header class="hero">
         <h1>Platform Engineering: Connections</h1>
-        <p class="lede">Kubernetes runs the workloads. Service Mesh decides which calls get through.</p>
+        <p class="lede">
+          Kubernetes runs the workloads. Service Mesh decides which calls get through.
+        </p>
         <p class="sub">
           Six live calls, run against
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
@@ -45,12 +47,18 @@ interface Result {
             <p class="grug">{{ c.grug }}</p>
           </div>
 
-          <div class="card" [class.allow]="verdict(i) === 'allow'"
+          <div
+            class="card"
+            [class.allow]="verdict(i) === 'allow'"
             [class.deny]="verdict(i) === 'deny'"
-            [class.broken]="verdict(i) === 'broken'">
+            [class.broken]="verdict(i) === 'broken'"
+          >
             @if (c.call; as call) {
               <div class="call">
-                <div class="pod {{ podClass(call.from) }}" [class.acting]="call.enforcedAt === 'downstream'">
+                <div
+                  class="pod {{ podClass(call.from) }}"
+                  [class.acting]="call.enforcedAt === 'downstream'"
+                >
                   <div class="pod-app">
                     <div class="role">caller</div>
                     <div class="who">{{ call.from }}</div>
@@ -63,12 +71,18 @@ interface Result {
                   </div>
                 </div>
 
-                <div class="wire {{ wirePhase(i) }}" [class.flying]="results()[i].state === 'calling'">
+                <div
+                  class="wire {{ wirePhase(i) }}"
+                  [class.flying]="results()[i].state === 'calling'"
+                >
                   <div class="gate-label">{{ call.gate }}</div>
                   <div class="leg"></div>
                 </div>
 
-                <div class="pod {{ podClass(call.to) }}" [class.acting]="call.enforcedAt === 'upstream'">
+                <div
+                  class="pod {{ podClass(call.to) }}"
+                  [class.acting]="call.enforcedAt === 'upstream'"
+                >
                   <div class="pod-app">
                     <div class="role">callee</div>
                     <div class="who">{{ call.to }}</div>
@@ -88,15 +102,15 @@ interface Result {
               <div class="res">
                 <span class="req">{{ call.request }}</span>
                 <span class="outcome">
-                <span
-                  class="status"
-                  [class.ok]="verdict(i) === 'allow'"
-                  [class.no]="verdict(i) === 'deny'"
-                  [class.warn]="verdict(i) === 'broken'"
-                  [class.idle]="results()[i].state !== 'done'"
-                  >{{ statusText(i) }}</span
-                >
-                <span class="ms">{{ results()[i].ms ? results()[i].ms + " ms" : "" }}</span>
+                  <span
+                    class="status"
+                    [class.ok]="verdict(i) === 'allow'"
+                    [class.no]="verdict(i) === 'deny'"
+                    [class.warn]="verdict(i) === 'broken'"
+                    [class.idle]="results()[i].state !== 'done'"
+                    >{{ statusText(i) }}</span
+                  >
+                  <span class="ms">{{ results()[i].ms ? results()[i].ms + " ms" : "" }}</span>
                 </span>
                 <button
                   class="run"
@@ -215,7 +229,9 @@ export class App {
 
   readonly cases = CASES
   readonly progress = signal(0)
-  readonly results = signal<Result[]>(CASES.map(() => ({ state: "idle", code: 0, ms: 0, body: "" })))
+  readonly results = signal<Result[]>(
+    CASES.map(() => ({ state: "idle", code: 0, ms: 0, body: "" })),
+  )
 
   // Which deep panels are open. A <details> cannot do this — the trigger sits in the
   // card and the content spans both grid columns, so they are two separate elements.

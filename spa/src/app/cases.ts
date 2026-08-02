@@ -102,8 +102,7 @@ spec:
   {
     kind: "on-platform → on-platform",
     title: "Not declared, so it is refused",
-    grug:
-      "Same API, same image, same network as the last call. This caller was never named, so it is turned away before the app ever sees it.",
+    grug: "Same API, same image, same network as the last call. This caller was never named, so it is turned away before the app ever sees it.",
     call: {
       from: "unauthorized-api",
       to: "upstream-api",
@@ -216,8 +215,7 @@ spec:
   {
     kind: "on-platform → off-platform",
     title: "An unregistered address is refused",
-    grug:
-      "Same app, same internet, one call later. This address was never declared, so the request does not even leave the pod.",
+    grug: "Same app, same internet, one call later. This address was never declared, so the request does not even leave the pod.",
     call: {
       from: "authorized-api",
       to: "example.com",
@@ -261,8 +259,7 @@ spec:
   {
     kind: "on-platform → off-platform",
     title: "A bound resource declares itself",
-    grug:
-      "The app writes an object to cloud storage, reads it back, then deletes it. It never declared the address — asking for the bucket was the declaration.",
+    grug: "The app writes an object to cloud storage, reads it back, then deletes it. It never declared the address — asking for the bucket was the declaration.",
     call: {
       from: "authorized-api",
       to: "s3.amazonaws.com",
@@ -307,8 +304,7 @@ spec:
   {
     kind: "on-platform → off-platform",
     title: "The same holds for a database",
-    grug:
-      "Write an item, read it back, delete it. A different resource, a different endpoint, and again nothing was declared by hand.",
+    grug: "Write an item, read it back, delete it. A different resource, a different endpoint, and again nothing was declared by hand.",
     call: {
       from: "authorized-api",
       to: "dynamodb.amazonaws.com",
@@ -322,7 +318,8 @@ spec:
     deep: `<p>A different resource, the same mechanism — which is the point. Every managed resource the platform offers resolves to an endpoint it already knows, so none of them belong in <code>consumes</code>.</p>
 <p>The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned for you, it can register for you — asking again would be asking for a fact it already holds.</p>
 <p>The read uses a consistent read, so the item cannot come back missing from a stale replica. A demo that fails one time in twenty teaches the wrong lesson.</p>`,
-    downstream: "<code>nosqlRef</code> → a <code>ServiceEntry</code> and egress entry for the database endpoint.",
+    downstream:
+      "<code>nosqlRef</code> → a <code>ServiceEntry</code> and egress entry for the database endpoint.",
     upstream: "Nothing. The database is outside the mesh too.",
     yaml: `# authorized-api — the caller
 nosqlRef:
@@ -352,8 +349,7 @@ spec:
   {
     kind: "where this stops",
     title: "Platform Connections stops at workload authorization",
-    grug:
-      "Every call above was decided by which pod was calling. Never by who was using it.",
+    grug: "Every call above was decided by which pod was calling. Never by who was using it.",
     deep: `<p class="answers"><b>It answers</b></p>
 <ul>
   <li>Can this workload call that workload?</li>
