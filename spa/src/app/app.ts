@@ -184,12 +184,6 @@ interface Result {
                     }
                   </div>
                 </div>
-                <div class="yaml-h sources-h">see the real files</div>
-                <div class="sources">
-                  @for (src of c.sources; track src.url) {
-                    <a [href]="src.url" target="_blank" rel="noopener">{{ src.label }} ↗</a>
-                  }
-                </div>
               </div>
             </ng-template>
 
