@@ -711,7 +711,10 @@ button:disabled {
   font-family: var(--font-mono);
   font-size: 0.74rem;
   color: var(--color-text-muted);
-  word-break: break-all;
+  min-width: 0;
+  /* anywhere, not break-all — break-all lets this shrink to one character per line
+     when the row is tight, which is what narrow screens did to it. */
+  overflow-wrap: anywhere;
 }
 /* Envoy's own words on a denial — worth more than any label we could write. */
 .body-text.denied {
@@ -966,7 +969,15 @@ button:disabled {
     min-width: 0;
   }
 
+  /* The body and its "Envoy wrote this" note cannot share a line at this width —
+     the note never wraps, so it pushed the body down to a single column of letters
+     and ran off the card. Stack them and let the note wrap. */
   .body-slot {
     margin-top: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .body-source {
+    flex-basis: 100%;
+    white-space: normal;
   }
 }
