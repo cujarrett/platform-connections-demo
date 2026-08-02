@@ -361,7 +361,7 @@ spec:
   <li>Can Alice view Order 123?</li>
   <li>Can Bob approve payroll?</li>
 </ul>
-<p>Those last two are about a person and a particular record. Nothing here knows either — that is a separate layer, deliberately.</p>`,
+<p>Those last two are about a person and a particular record.</p>`,
     sources: [DESIGN_DOC],
   },
 ]
