@@ -9,7 +9,7 @@ export interface Case {
     gate: string
     url: string
     request: string
-    /** Which pod's sidecar decides. The marker lands there, not mid-wire. */
+    /** Which pod's mesh strip decides. The marker lands there, not mid-wire. */
     enforcedAt: "downstream" | "upstream"
     /** What the mesh should answer. Anything else means the demo is not wired up. */
     expect: number
@@ -30,6 +30,16 @@ const WORKSPACES =
   "https://github.com/cujarrett/homelab-workspaces/blob/main/platform-connections-demo"
 const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 
+// Pinned to a commit, not to main. A line range on a moving branch drifts silently and
+// eventually points at the wrong block; a permalink keeps pointing at the code that
+// actually rendered the YAML above. Repin when the composition changes materially.
+const COMPOSITION_SHA = "9eaac341b53a2017e16f3b56dafbed285c8becc3"
+const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
+
+function composition(label: string, lines: string) {
+  return { label: `Api composition — ${label}`, url: `${COMPOSITION}#${lines}` }
+}
+
 const API_COMPOSITION = {
   label: "Api composition — renders the policy",
   url: `${HOMELAB}/platform/api/composition.yaml`,
@@ -42,25 +52,74 @@ const DESIGN_DOC = {
 export const CASES: Case[] = [
   {
     kind: "on-platform → on-platform",
+    title: "Declared, so it works",
+    grug: "The API was told this caller may call it. That one line is the only reason this works.",
+    call: {
+      from: "authorized-api",
+      to: "upstream-api",
+      gate: "callee lets it in?",
+      url: "/authorized/api/call",
+      enforcedAt: "upstream",
+      expect: 200,
+      request: "GET upstream-api/api/v1/data",
+      why: "<b>Allowed.</b> The caller's identity is named in the policy, so it passes.",
+    },
+    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. This caller's identity appears in a rule, so the request passes.</p>
+<p>The grant is <b>coarse by default</b>: no methods or paths means the whole API. Narrow it only when one API has more than one trust boundary, such as <code>/public/</code> versus <code>/admin/</code>.</p>`,
+    downstream:
+      "Declares nothing. A caller needs no declaration to reach an app in its own namespace.",
+    upstream:
+      "<code>provides.allowedCallers</code> → an <code>AuthorizationPolicy</code> on the way in. This caller is named in a rule, so it passes.",
+    yaml: `# upstream-api — the callee
+provides:
+  - name: data
+    allowedCallers:
+      # ↓ the only caller granted
+      - namespace: platform-connections-demo
+        app: authorized-api`,
+    istio: `# lands on upstream-api's own pod
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: upstream-api
+spec:
+  selector:
+    matchLabels: { app.kubernetes.io/instance: upstream-api }
+  action: ALLOW
+  rules:
+    # provides: data
+    - from:
+        - source:
+            principals:
+              # ↓ the identity the caller proved with its certificate
+              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
+              # no methods, no paths — the grant is the whole API`,
+    sources: [
+      { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
+      composition("the AuthorizationPolicy", "L740-L789"),
+    ],
+  },
+  {
+    kind: "on-platform → on-platform",
     title: "Not declared, so it is refused",
     grug:
-      "The API was never told this caller may call it. The request reaches the API's pod and is turned away before the app ever sees it.",
+      "Same API, same image, same network as the last call. This caller was never named, so it is turned away before the app ever sees it.",
     call: {
       from: "unauthorized-api",
       to: "upstream-api",
-      gate: "upstream lets it in?",
+      gate: "callee lets it in?",
       url: "/unauthorized/api/call",
       enforcedAt: "upstream",
       expect: 403,
       request: "GET upstream-api/api/v1/data",
       why: "<b>Denied.</b> Nothing was wrong with the caller — it simply was not on the list.",
     },
-    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto <b>its own</b> pod. The first ALLOW policy to select a workload makes that workload deny-by-default, so anything unnamed is refused.</p>
+    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. The first ALLOW policy to select a workload makes that workload deny-by-default, so anything unnamed is refused — and this caller is not named. Both callers run a byte-identical image; only the declaration differs, which is the whole point.</p>
 <p><b>Could a pod just claim to be someone else?</b> No. Identity is not a name in a header — every meshed pod holds an X.509 certificate issued to its service account, and <code>PeerAuthentication</code> in STRICT mode refuses any peer that cannot present one. The name is only checked after the certificate proves it.</p>`,
     downstream:
       "Declares nothing. Its request leaves normally — it is stopped at the far end, not this one.",
     upstream:
-      "<code>provides.allowedCallers</code> → <code>AuthorizationPolicy</code> on its inbound sidecar. Returns 403.",
+      "<code>provides.allowedCallers</code> → <code>AuthorizationPolicy</code> on the way in. Returns 403.",
     yaml: `# upstream-api — the callee
 provides:
   - name: data
@@ -96,106 +155,13 @@ spec:
 # unauthorized-api names no rule, and ALLOW makes the rest a wall`,
     sources: [
       { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      API_COMPOSITION,
-    ],
-  },
-  {
-    kind: "on-platform → on-platform",
-    title: "Declared, so it works",
-    grug: "Same API, same image, same network as the last call. This caller is on the list.",
-    call: {
-      from: "authorized-api",
-      to: "upstream-api",
-      gate: "upstream lets it in?",
-      url: "/authorized/api/call",
-      enforcedAt: "upstream",
-      expect: 200,
-      request: "GET upstream-api/api/v1/data",
-      why: "<b>Allowed.</b> One line of declaration is the entire difference from the previous call.",
-    },
-    deep: `<p>The same policy object as before — this caller's identity appears in its rule, so the request passes. Both callers run a byte-identical image; only the declaration differs, which is the whole point.</p>
-<p>The grant is <b>coarse by default</b>: no methods or paths means the whole API. Narrow it only when one API has more than one trust boundary, such as <code>/public/</code> versus <code>/admin/</code>.</p>`,
-    downstream:
-      "Still declares nothing for this call. On-platform destinations need no declaration from the caller.",
-    upstream:
-      "Same <code>AuthorizationPolicy</code>. This caller's identity matches a rule, so it passes.",
-    yaml: `# upstream-api — the callee
-provides:
-  - name: data
-    allowedCallers:
-      # ↓ the whole difference
-      - namespace: platform-connections-demo
-        app: authorized-api`,
-    istio: `# the same object as the previous call, unchanged
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: upstream-api
-spec:
-  selector:
-    matchLabels: { app.kubernetes.io/instance: upstream-api }
-  action: ALLOW
-  rules:
-    # provides: data
-    - from:
-        - source:
-            principals:
-              # ↓ the identity the caller proved with its certificate
-              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-# no methods and no paths, so the grant covers the whole API`,
-    sources: [
-      { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      API_COMPOSITION,
-    ],
-  },
-  {
-    kind: "on-platform → off-platform",
-    title: "An unregistered address is refused",
-    grug: "The app tries to reach a site nobody registered. The request never leaves its own pod.",
-    call: {
-      from: "authorized-api",
-      to: "example.com",
-      gate: "may I leave?",
-      url: "/authorized/api/leak",
-      enforcedAt: "downstream",
-      expect: 502,
-      request: "GET https://example.com",
-      why: "<b>Blocked at its own sidecar.</b> The packet never reaches the internet.",
-    },
-    deep: `<p>Off-platform is the mirror image of the first two calls. There is no pod on the far end to hold a policy, so the only place to decide is the caller's own outbound sidecar.</p>
-<p>Its <code>Sidecar</code> runs in <code>REGISTRY_ONLY</code> mode: it may reach cluster services in its own namespace, the control plane, and the hosts it declared. Nothing else exists as far as it is concerned.</p>`,
-    downstream:
-      "<code>Sidecar</code> + <code>REGISTRY_ONLY</code> on its outbound side. <code>example.com</code> is not listed, so the call dies here.",
-    upstream:
-      "Nothing. It is a website on the internet — no sidecar, and it never learns the call was attempted.",
-    yaml: `# authorized-api — the caller
-consumes:
-  - host: api.open-meteo.com
-# example.com is absent, so it is unreachable`,
-    istio: `# lands on authorized-api's own pod
-apiVersion: networking.istio.io/v1
-kind: Sidecar
-metadata:
-  name: authorized-api
-spec:
-  workloadSelector:
-    labels: { app.kubernetes.io/instance: authorized-api }
-  outboundTrafficPolicy:
-    mode: REGISTRY_ONLY   # unknown address means no address
-  egress:
-    - hosts:
-        - "istio-system/*"          # the control plane
-        - "./api.open-meteo.com"    # the one host it declared
-# example.com is on no list, so the sidecar has nowhere to send it`,
-    sources: [
-      { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
-      API_COMPOSITION,
+      composition("PeerAuthentication + AuthorizationPolicy", "L716-L789"),
     ],
   },
   {
     kind: "on-platform → off-platform",
     title: "A registered address works",
-    grug: "Same app, same internet. This address was declared, so the call goes out.",
+    grug: "Now outward. This app declared one address on the internet, so the call to it goes out.",
     call: {
       from: "authorized-api",
       to: "api.open-meteo.com",
@@ -211,7 +177,7 @@ spec:
     downstream:
       "<code>consumes.host</code> → a <code>ServiceEntry</code> plus an egress entry, both scoped to this pod.",
     upstream:
-      "Still nothing. The site checks no identity — the mesh controls which workload may reach it, from this end.",
+      "Nothing. The site checks no identity — the mesh controls which workload may reach it, from this end.",
     yaml: `# authorized-api — the caller
 consumes:
   - host: api.open-meteo.com
@@ -244,7 +210,52 @@ spec:
 # the entry makes the host known, the egress line makes it this pod's to reach`,
     sources: [
       { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
-      API_COMPOSITION,
+      composition("the Sidecar egress list", "L790-L828"),
+    ],
+  },
+  {
+    kind: "on-platform → off-platform",
+    title: "An unregistered address is refused",
+    grug:
+      "Same app, same internet, one call later. This address was never declared, so the request does not even leave the pod.",
+    call: {
+      from: "authorized-api",
+      to: "example.com",
+      gate: "may I leave?",
+      url: "/authorized/api/leak",
+      enforcedAt: "downstream",
+      expect: 502,
+      request: "GET https://example.com",
+      why: "<b>Blocked on the way out.</b> The packet never reaches the internet.",
+    },
+    deep: `<p>Off-platform is the mirror image of the first two calls. There is no pod on the far end to hold a policy, so the only place to decide is the caller's own side, on the way out.</p>
+<p>Its <code>Sidecar</code> runs in <code>REGISTRY_ONLY</code> mode: it may reach cluster services in its own namespace, the control plane, and the hosts it declared. Nothing else exists as far as it is concerned.</p>`,
+    downstream:
+      "<code>Sidecar</code> + <code>REGISTRY_ONLY</code> on its outbound side. <code>example.com</code> is not listed, so the call dies here.",
+    upstream:
+      "Nothing. It is a website on the internet — outside the mesh, and it never learns the call was attempted.",
+    yaml: `# authorized-api — the caller
+consumes:
+  - host: api.open-meteo.com
+# example.com is absent, so it is unreachable`,
+    istio: `# lands on authorized-api's own pod
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  workloadSelector:
+    labels: { app.kubernetes.io/instance: authorized-api }
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY   # unknown address means no address
+  egress:
+    - hosts:
+        - "istio-system/*"          # the control plane
+        - "./api.open-meteo.com"    # the one host it declared
+# example.com is on no list, so there is nowhere to send it`,
+    sources: [
+      { label: "authorized-api.yaml — what it declares", url: `${WORKSPACES}/authorized-api.yaml` },
+      composition("the Sidecar egress list", "L790-L828"),
     ],
   },
   {
@@ -262,12 +273,12 @@ spec:
       request: "PutObject → GetObject → DeleteObject",
       why: "<b>Allowed.</b> The bucket reference is what opened the path to it.",
     },
-    deep: `<p>The two calls above needed a <code>consumes</code> entry because nothing else stated where they were going. This one does not. The app asked the platform for a bucket, and a bucket implies exactly one endpoint — so the platform registers it, the same way it registers a cache the app created itself.</p>
+    deep: `<p>An off-platform host normally needs a <code>consumes</code> entry, because nothing else states where the call is going. This one does not. The app asked the platform for a bucket, and a bucket implies exactly one endpoint — so the platform registers it, the same way it registers a cache the app created itself.</p>
 <p><b>Three round trips are actually happening.</b> Before any of them, a sidecar exchanges this pod's identity certificate for temporary cloud credentials, which is a call to two more endpoints the app never named. All of it is refused unless registered, so the platform registers those too — miss them and the pod starts cleanly, then fails every call with no clue pointing at the mesh.</p>
 <p>Nothing durable is created: the object is written, read back to prove it arrived, and deleted before the response returns.</p>`,
     downstream:
       "<code>objectStorageRefs</code> → a <code>ServiceEntry</code> and egress entry per endpoint, plus the credential endpoints.",
-    upstream: "Nothing. Cloud storage runs no sidecar, so gates 3 and 4 do not exist for it.",
+    upstream: "Nothing. Cloud storage is outside the mesh, so gates 3 and 4 do not exist for it.",
     yaml: `# authorized-api — the caller
 objectStorageRefs:
   - name: assets
@@ -289,7 +300,8 @@ spec:
     sources: [
       { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
       { label: "assets.yaml — the bucket", url: `${WORKSPACES}/assets.yaml` },
-      API_COMPOSITION,
+      composition("where the endpoints are derived", "L92-L111"),
+      composition("the ServiceEntry it renders", "L829-L852"),
     ],
   },
   {
@@ -307,11 +319,11 @@ spec:
       request: "PutItem → GetItem → DeleteItem",
       why: "<b>Allowed.</b> Same mechanism as the bucket, a different endpoint.",
     },
-    deep: `<p>This is the previous case with one word changed, which is the point. Every managed resource the platform offers resolves to an endpoint it already knows, so none of them belong in <code>consumes</code>.</p>
+    deep: `<p>A different resource, the same mechanism — which is the point. Every managed resource the platform offers resolves to an endpoint it already knows, so none of them belong in <code>consumes</code>.</p>
 <p>The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned for you, it can register for you — asking again would be asking for a fact it already holds.</p>
 <p>The read uses a consistent read, so the item cannot come back missing from a stale replica. A demo that fails one time in twenty teaches the wrong lesson.</p>`,
     downstream: "<code>nosqlRef</code> → a <code>ServiceEntry</code> and egress entry for the database endpoint.",
-    upstream: "Nothing. The database runs no sidecar either.",
+    upstream: "Nothing. The database is outside the mesh too.",
     yaml: `# authorized-api — the caller
 nosqlRef:
   name: records
@@ -333,7 +345,8 @@ spec:
     sources: [
       { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
       { label: "records.yaml — the table", url: `${WORKSPACES}/records.yaml` },
-      API_COMPOSITION,
+      composition("where the endpoints are derived", "L92-L111"),
+      composition("the ServiceEntry it renders", "L829-L852"),
     ],
   },
   {

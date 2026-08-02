@@ -30,9 +30,9 @@ interface Result {
         <h1>Platform Engineering: Connections</h1>
         <p class="lede">Kubernetes runs the workloads. Service Mesh decides which calls get through.</p>
         <p class="sub">
-          Four live examples, run against
+          Six live calls, run against
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
-            >my Kubernetes bookshelf cluster</a
+            >my bookshelf Kubernetes cluster</a
           >.
         </p>
       </header>
@@ -50,32 +50,37 @@ interface Result {
             [class.broken]="verdict(i) === 'broken'">
             @if (c.call; as call) {
               <div class="call">
-                <div class="pod" [class.acting]="call.enforcedAt === 'downstream'">
-                  <div class="role">downstream · caller</div>
-                  <div class="who">{{ call.from }}</div>
-                  <div class="sidecar" [class.gate]="call.enforcedAt === 'downstream'">
-                    <span>sidecar</span>
+                <div class="pod {{ podClass(call.from) }}" [class.acting]="call.enforcedAt === 'downstream'">
+                  <div class="pod-app">
+                    <div class="role">caller</div>
+                    <div class="who">{{ call.from }}</div>
+                  </div>
+                  <div class="mesh" [class.gate]="call.enforcedAt === 'downstream'">
+                    <span>service mesh</span>
                     @if (call.enforcedAt === "downstream") {
                       <span class="mark" [class]="verdict(i)">{{ mark(i) }}</span>
                     }
                   </div>
                 </div>
 
-                <div class="wire" [class.flying]="results()[i].state === 'calling'">
-                  <div class="track"></div>
+                <div class="wire {{ wirePhase(i) }}" [class.flying]="results()[i].state === 'calling'">
                   <div class="gate-label">{{ call.gate }}</div>
+                  <div class="leg"></div>
                 </div>
 
-                <div class="pod" [class.acting]="call.enforcedAt === 'upstream'">
-                  <div class="role">upstream · callee</div>
-                  <div class="who">{{ call.to }}</div>
+                <div class="pod {{ podClass(call.to) }}" [class.acting]="call.enforcedAt === 'upstream'">
+                  <div class="pod-app">
+                    <div class="role">callee</div>
+                    <div class="who">{{ call.to }}</div>
+                    @if (call.enforcedAt !== "upstream") {
+                      <div class="kind-note">{{ offPlatformKind(call.to) }}</div>
+                    }
+                  </div>
                   @if (call.enforcedAt === "upstream") {
-                    <div class="sidecar gate">
-                      <span>sidecar</span>
+                    <div class="mesh gate">
+                      <span>service mesh</span>
                       <span class="mark" [class]="verdict(i)">{{ mark(i) }}</span>
                     </div>
-                  } @else {
-                    <div class="sidecar muted"><span>no sidecar — off platform</span></div>
                   }
                 </div>
               </div>
@@ -134,23 +139,31 @@ interface Result {
                 @if (c.downstream && c.upstream) {
                   <div class="sides">
                     <div>
-                      <div class="h">on the downstream pod</div>
+                      <div class="h">on the caller's pod</div>
                       <div [innerHTML]="html(c.downstream)"></div>
                     </div>
                     <div>
-                      <div class="h">on the upstream side</div>
+                      <div class="h">on the callee's side</div>
                       <div [innerHTML]="html(c.upstream)"></div>
                     </div>
                   </div>
                 }
-                @if (c.yaml; as y) {
-                  <div class="yaml-h">what the team writes</div>
-                  <pre><code [innerHTML]="yaml(y)"></code></pre>
-                }
-                @if (c.istio; as policy) {
-                  <div class="yaml-h">what the platform renders — istio</div>
-                  <pre><code [innerHTML]="yaml(policy)"></code></pre>
-                }
+                <!-- Side by side so the asymmetry is the point: a few lines declared,
+                     all of that rendered. Stacks below the two-column breakpoint. -->
+                <div class="yaml-pair">
+                  @if (c.yaml; as y) {
+                    <div class="yaml-col">
+                      <div class="yaml-h">what the team writes</div>
+                      <pre><code [innerHTML]="yaml(y)"></code></pre>
+                    </div>
+                  }
+                  @if (c.istio; as policy) {
+                    <div class="yaml-col">
+                      <div class="yaml-h">what the platform renders — istio</div>
+                      <pre><code [innerHTML]="yaml(policy)"></code></pre>
+                    </div>
+                  }
+                </div>
                 <div class="sources">
                   @for (src of c.sources; track src.url) {
                     <a [href]="src.url" target="_blank" rel="noopener">{{ src.label }} ↗</a>
@@ -159,18 +172,29 @@ interface Result {
               </div>
             </ng-template>
 
-            @if (c.call) {
-              <details>
-                <summary>
-                  <span class="sum-text">{{ detailPrompt(i) }}</span>
-                  <span class="sum-chev">›</span>
-                </summary>
-                <ng-container [ngTemplateOutlet]="detail" />
-              </details>
-            } @else {
+            @if (!c.call) {
               <ng-container [ngTemplateOutlet]="detail" />
             }
+            <!-- Only after the call lands. The panel explains what just happened, so
+                 offering it beforehand asks a question the reader has not met yet. -->
+            @if (c.call && results()[i].state === "done") {
+              <button
+                class="deep-toggle"
+                [class.open]="isOpen(i)"
+                (click)="togglePanel(i)"
+                [attr.aria-expanded]="isOpen(i)"
+              >
+                <span class="sum-text">{{ detailPrompt(i) }}</span>
+                <span class="sum-chev">›</span>
+              </button>
+            }
           </div>
+
+          @if (c.call && isOpen(i)) {
+            <div class="deep-panel">
+              <ng-container [ngTemplateOutlet]="detail" />
+            </div>
+          }
         </section>
       }
     </div>
@@ -187,6 +211,45 @@ export class App {
   readonly progress = signal(0)
   readonly results = signal<Result[]>(CASES.map(() => ({ state: "idle", code: 0, ms: 0, body: "" })))
 
+  // Which deep panels are open. A <details> cannot do this — the trigger sits in the
+  // card and the content spans both grid columns, so they are two separate elements.
+  private readonly openPanels = signal<ReadonlySet<number>>(new Set())
+
+  // Each on-platform app keeps one colour across every card so the reader tracks
+  // actors by sight. Off-platform destinations share one muted colour — they are
+  // scenery, not participants. Green and red stay reserved for call results.
+  podClass(name: string): string {
+    const known: Record<string, string> = {
+      "authorized-api": "pod-authorized",
+      "unauthorized-api": "pod-unauthorized",
+      "upstream-api": "pod-callee",
+      "api.open-meteo.com": "pod-metro",
+      "example.com": "pod-example",
+      "s3.amazonaws.com": "pod-s3",
+      "dynamodb.amazonaws.com": "pod-dynamo",
+    }
+    return known[name] ?? "pod-site"
+  }
+
+  // Off-platform destinations are not all alike to the app: one is a website it calls
+  // over HTTP, the other a cloud service it calls through an SDK. To the mesh they are
+  // the same MESH_EXTERNAL entry, so the difference is named, never gated on.
+  offPlatformKind(name: string): string {
+    return name.endsWith("amazonaws.com") ? "cloud service" : "public site"
+  }
+
+  isOpen(i: number): boolean {
+    return this.openPanels().has(i)
+  }
+
+  togglePanel(i: number): void {
+    this.openPanels.update((open) => {
+      const next = new Set(open)
+      if (!next.delete(i)) next.add(i)
+      return next
+    })
+  }
+
   @HostListener("window:scroll")
   onScroll(): void {
     const max = document.documentElement.scrollHeight - window.innerHeight
@@ -194,6 +257,18 @@ export class App {
   }
 
   /** "" until answered, "broken" when the answer is not one the mesh would give. */
+  // Where the packet actually died decides how far the leg travels. A call refused at
+  // the caller's own side never crossed the wire — drawing it arriving and bouncing
+  // back would teach the opposite of what the 502 means.
+  wirePhase(i: number): string {
+    const v = this.verdict(i)
+    if (!v) return ""
+    if (v === "broken") return "wire-crossed-broken"
+    const call = this.cases[i].call
+    if (v === "deny" && call?.enforcedAt === "downstream") return "wire-stopped-near"
+    return v === "deny" ? "wire-crossed-deny" : "wire-crossed-allow"
+  }
+
   verdict(i: number): "allow" | "deny" | "broken" | "" {
     const r = this.results()[i]
     if (r.state !== "done") return ""
@@ -239,7 +314,7 @@ export class App {
     }
   }
 
-  /** Symbol shown on the sidecar that decided. */
+  /** Symbol shown on the mesh strip that decided. */
   mark(i: number): string {
     const v = this.verdict(i)
     return v === "allow" ? "✓" : v === "deny" ? "✕" : v === "broken" ? "!" : "·"
