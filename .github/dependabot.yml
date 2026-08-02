@@ -28,6 +28,18 @@ updates:
           - "minor"
           - "patch"
 
+  - package-ecosystem: "npm"
+    directory: "/spa"
+    schedule:
+      interval: "daily"
+    cooldown:
+      default-days: 7
+    groups:
+      non-breaking:
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
