@@ -420,12 +420,27 @@ spec:
         - "./rolesanywhere.us-east-1.amazonaws.com"
         - "./sts.us-east-1.amazonaws.com"
         # ↓ one host per bucket, not one endpoint for the whole region
-        - "./platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"
-# one ServiceEntry per host too, all from one line of YAML`,
-        sources: [
-          composition("where the endpoints are derived from the refs", 92, 111),
-          composition("the Sidecar egress list", 790, 828),
-        ],
+        - "./platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"`,
+        sources: [composition("the Sidecar egress list", 790, 828)],
+        actor: "caller",
+      },
+      {
+        code: `# one of these per host in the list above, bucket included
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: authorized-api-platform-platform-connections-demo-assets-s3-us-east-1-amazonaws-com
+spec:
+  hosts:
+    - "platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"
+  location: MESH_EXTERNAL
+  resolution: DNS
+  exportTo: ["."]
+  ports:
+    - number: 443
+      name: tls
+      protocol: TLS`,
+        sources: [composition("the ServiceEntry per derived endpoint", 829, 850)],
         actor: "caller",
       },
     ],
@@ -462,6 +477,24 @@ spec:
     ],
     rendered: [
       {
+        code: `# same egress list as the bucket, one more host appended
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  egress:
+    - hosts:
+        - "istio-system/*"
+        - "./rolesanywhere.us-east-1.amazonaws.com"
+        - "./sts.us-east-1.amazonaws.com"
+        - "./platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"
+        # ↓ every table in the region shares this one host
+        - "./dynamodb.us-east-1.amazonaws.com"`,
+        sources: [composition("the Sidecar egress list", 790, 828)],
+        actor: "caller",
+      },
+      {
         code: `apiVersion: networking.istio.io/v1
 kind: ServiceEntry
 metadata:
@@ -476,10 +509,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-        sources: [
-          composition("where the endpoints are derived from the refs", 92, 111),
-          composition("the ServiceEntry per derived endpoint", 829, 850),
-        ],
+        sources: [composition("the ServiceEntry per derived endpoint", 829, 850)],
         actor: "caller",
       },
     ],
