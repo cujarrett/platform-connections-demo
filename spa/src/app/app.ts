@@ -8,8 +8,72 @@ import {
 } from "@angular/core"
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser"
 import { NgTemplateOutlet } from "@angular/common"
-import { CASES, Case } from "./cases"
+import { CASES, Case, Snippet } from "./cases"
 import { highlightYaml } from "./yaml-highlight"
+import { LaunchpadMark } from "./launchpad-mark"
+
+type Actor = "caller" | "callee"
+
+/** One pod's whole story: what its team declared, then what the platform put on it. */
+interface Party {
+  actor: Actor
+  label: string
+  cls: string
+  blocks: { snip: Snippet; role: string }[]
+  /** Stands in for the blocks when a pod renders nothing — off-platform callees. */
+  note?: string
+}
+
+// Each on-platform app keeps one colour across every card so the reader tracks
+// actors by sight. Off-platform destinations share one muted colour — they are
+// scenery, not participants. Green and red stay reserved for call results.
+const POD_CLASS: Record<string, string> = {
+  "authorized-api": "pod-authorized",
+  "unauthorized-api": "pod-unauthorized",
+  "upstream-api": "pod-callee",
+  "api.open-meteo.com": "pod-metro",
+  "example.com": "pod-example",
+  "s3.amazonaws.com": "pod-s3",
+  "dynamodb.amazonaws.com": "pod-dynamo",
+}
+const podClassOf = (name: string): string => POD_CLASS[name] ?? "pod-site"
+
+/**
+ * One column per pod, caller left and callee right, matching the diagram above it.
+ * Within a column: what that pod's team declared, then what the platform rendered onto
+ * it. Split by written-vs-rendered instead, both columns held both pods, and ownership
+ * could only be worked out by counting rows across blocks of unequal height.
+ */
+function partiesOf(c: Case): Party[] {
+  const byActor = new Map<Actor, Party>()
+  const add = (snip: Snippet, role: string) => {
+    if (!snip.actor) return
+    const party = byActor.get(snip.actor) ?? {
+      actor: snip.actor,
+      label: "",
+      cls: "",
+      blocks: [],
+    }
+    party.blocks.push({ snip, role })
+    byActor.set(snip.actor, party)
+  }
+  for (const snip of c.declared ?? []) add(snip, "the app declares")
+  for (const snip of c.rendered ?? []) add(snip, "the platform makes")
+
+  if (!byActor.has("callee") && c.call && c.upstream) {
+    byActor.set("callee", { actor: "callee", label: "", cls: "", blocks: [], note: c.upstream })
+  }
+
+  const order: Actor[] = ["caller", "callee"]
+  return order.flatMap((actor) => {
+    const party = byActor.get(actor)
+    if (!party) return []
+    const name = (actor === "caller" ? c.call?.from : c.call?.to) ?? ""
+    party.label = `${actor} · ${name}`
+    party.cls = podClassOf(name)
+    return [party]
+  })
+}
 
 interface Result {
   state: "idle" | "calling" | "done"
@@ -20,14 +84,14 @@ interface Result {
 
 @Component({
   selector: "app-root",
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, LaunchpadMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scroll-progress" [style.width.%]="progress()"></div>
 
     <div class="page">
       <header class="hero">
-        <h1>Platform Engineering: Connections</h1>
+        <h1><app-launchpad-mark [animate]="true" />Platform Engineering: Connections</h1>
         <p class="lede">
           Kubernetes runs the workloads. Service Mesh decides which calls get through.
         </p>
@@ -36,15 +100,21 @@ interface Result {
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
             >my bookshelf Kubernetes cluster</a
           >.
+          <a
+            href="https://github.com/cujarrett/homelab/blob/main/docs/nothing-novel.md"
+            target="_blank"
+            rel="noopener"
+            >Nothing here is novel</a
+          >.
         </p>
       </header>
 
       @for (c of cases; track c.title; let i = $index) {
-        <section class="case" [id]="'case-' + i">
-          <div class="narrative" [class]="verdict(i)">
+        <section class="case" [class]="verdict(i)" [id]="'case-' + i">
+          <div class="narrative">
             <span class="kind">{{ c.kind }}</span>
             <h2>{{ c.title }}</h2>
-            <p class="grug">{{ c.grug }}</p>
+            <p class="summary">{{ c.summary }}</p>
           </div>
 
           <div
@@ -112,6 +182,9 @@ interface Result {
                   >
                   <span class="ms">{{ results()[i].ms ? results()[i].ms + " ms" : "" }}</span>
                 </span>
+                @if (call.codeNote && results()[i].state === "done") {
+                  <span class="code-note">{{ call.codeNote }}</span>
+                }
                 <button
                   class="run"
                   [class.primary]="results()[i].state === 'idle'"
@@ -129,7 +202,7 @@ interface Result {
                     responseBody(i)
                   }}</span>
                   @if (isEnvoyBody(i)) {
-                    <span class="body-source">not JSON — Envoy wrote this, the app never ran</span>
+                    <span class="body-source">not JSON. Envoy wrote this, the app never ran</span>
                   }
                 }
               </div>
@@ -138,8 +211,8 @@ interface Result {
                 @if (verdict(i) === "broken") {
                   <p class="why broken">
                     <b>Demo not connected.</b> Expected HTTP {{ call.expect }} from the mesh. Start
-                    it with <code>just dev</code> from <code>spa/</code> — <code>npm start</code>
-                    alone skips the port-forwards.
+                    it with <code>just dev</code> from <code>spa/</code>.
+                    <code>npm start</code> alone skips the port-forwards.
                   </p>
                 } @else if (results()[i].state === "done") {
                   <p class="why" [innerHTML]="html(call.why)"></p>
@@ -147,42 +220,71 @@ interface Result {
               </div>
             }
 
+            <!-- Every link on the page is one of these: the file, what to look at once
+                 it opens, and the line range when there is one. Rendered next to the
+                 snippet it belongs to, so "show me the real thing" is one click from
+                 the thing itself, never a footnote pile at the bottom. -->
+            <ng-template #source let-s let-compact="compact">
+              <a class="src" [href]="s.url" [title]="s.note" target="_blank" rel="noopener">
+                <span class="src-file">{{ s.file }}</span>
+                <span class="src-go">↗</span>
+                @if (!compact) {
+                  <span class="src-note">{{ s.note }}</span>
+                }
+              </a>
+            </ng-template>
+
+            <!-- One column per pod, in that pod's colour, in the same order as the
+                 diagram above — caller left, callee right. Each block is its own box so
+                 two files never share one scroll box with a blank line between them. -->
+            <ng-template #partyCol let-party>
+              <div class="yaml-col {{ party.cls }}">
+                <div class="yaml-h">{{ party.label }}</div>
+                @if (party.note; as note) {
+                  <p class="party-note" [innerHTML]="html(note)"></p>
+                }
+                @for (block of party.blocks; track $index) {
+                  <div class="snippet">
+                    <div class="srcs">
+                      <span class="src-role">{{ block.role }}</span>
+                      <span class="src-links">
+                        @for (s of block.snip.sources; track s.url) {
+                          <ng-container
+                            [ngTemplateOutlet]="source"
+                            [ngTemplateOutletContext]="{ $implicit: s, compact: true }"
+                          />
+                        }
+                      </span>
+                    </div>
+                    <pre><code [innerHTML]="yaml(block.snip.code)"></code></pre>
+                  </div>
+                }
+              </div>
+            </ng-template>
+
             <ng-template #detail>
               <div class="deep">
                 <div [innerHTML]="html(c.deep)"></div>
-                @if (c.downstream && c.upstream) {
-                  <div class="sides">
-                    <div>
-                      <div class="h">on the caller's pod</div>
-                      <div [innerHTML]="html(c.downstream)"></div>
-                    </div>
-                    <div>
-                      <div class="h">on the callee's side</div>
-                      <div [innerHTML]="html(c.upstream)"></div>
-                    </div>
+                @if (c.docs; as docs) {
+                  <div class="srcs">
+                    @for (d of docs; track d.url) {
+                      <ng-container
+                        [ngTemplateOutlet]="source"
+                        [ngTemplateOutletContext]="{ $implicit: d }"
+                      />
+                    }
                   </div>
                 }
-                <!-- Side by side so the asymmetry is the point: a few lines declared,
-                     all of that rendered. Stacks below the two-column breakpoint. -->
-                <!-- Both blocks belong to the same pod: the file that declares it and the
-                     policy it renders land together. They sit on that pod's side, matching
-                     the diagram above — caller left, callee right. The other column stays
-                     empty on purpose; the box above it already says why. -->
-                <div class="yaml-pair" [class.owner-caller]="c.call?.enforcedAt === 'downstream'">
-                  <div class="yaml-stack">
-                    @if (c.yaml; as y) {
-                      <div class="yaml-col">
-                        <div class="yaml-h">what the team writes</div>
-                        <pre><code [innerHTML]="yaml(y)"></code></pre>
-                      </div>
-                    }
-                    @if (c.istio; as policy) {
-                      <div class="yaml-col">
-                        <div class="yaml-h">what the platform renders — istio</div>
-                        <pre><code [innerHTML]="yaml(policy)"></code></pre>
-                      </div>
-                    }
-                  </div>
+                <!-- Declaration left, rendered policy right, across the full width. The
+                     asymmetry is the point — a few lines written, all of that rendered —
+                     and it only lands when the two are side by side at the same scale. -->
+                <div class="yaml-pair">
+                  @for (party of parties[i]; track party.actor) {
+                    <ng-container
+                      [ngTemplateOutlet]="partyCol"
+                      [ngTemplateOutletContext]="{ $implicit: party }"
+                    />
+                  }
                 </div>
               </div>
             </ng-template>
@@ -191,14 +293,12 @@ interface Result {
               <ng-container [ngTemplateOutlet]="detail" />
             }
             <!-- Only after the call lands. The panel explains what just happened, so
-                 offering it beforehand asks a question the reader has not met yet. -->
-            @if (c.call && results()[i].state === "done") {
-              <button
-                class="deep-toggle"
-                [class.open]="isOpen(i)"
-                (click)="togglePanel(i)"
-                [attr.aria-expanded]="isOpen(i)"
-              >
+                 offering it beforehand asks a question the reader has not met yet.
+                 Gone once open, because the panel's head below carries the same words —
+                 shown in both places the question reads as asked twice, rather than as
+                 the one thing that moved. -->
+            @if (c.call && results()[i].state === "done" && !isOpen(i)) {
+              <button class="deep-toggle" (click)="togglePanel(i)" [attr.aria-expanded]="false">
                 <span class="sum-text">{{ detailPrompt(i) }}</span>
                 <span class="sum-chev">›</span>
               </button>
@@ -206,7 +306,12 @@ interface Result {
           </div>
 
           @if (c.call && isOpen(i)) {
-            <div class="deep-panel">
+            <div class="deep-panel" [class]="verdict(i)">
+              <button class="deep-head" (click)="togglePanel(i)" [attr.aria-expanded]="true">
+                <span class="deep-mark">{{ mark(i) }}</span>
+                <span>{{ detailPrompt(i) }}</span>
+                <span class="sum-chev">›</span>
+              </button>
               <ng-container [ngTemplateOutlet]="detail" />
             </div>
           }
@@ -236,17 +341,11 @@ export class App {
   // actors by sight. Off-platform destinations share one muted colour — they are
   // scenery, not participants. Green and red stay reserved for call results.
   podClass(name: string): string {
-    const known: Record<string, string> = {
-      "authorized-api": "pod-authorized",
-      "unauthorized-api": "pod-unauthorized",
-      "upstream-api": "pod-callee",
-      "api.open-meteo.com": "pod-metro",
-      "example.com": "pod-example",
-      "s3.amazonaws.com": "pod-s3",
-      "dynamodb.amazonaws.com": "pod-dynamo",
-    }
-    return known[name] ?? "pod-site"
+    return podClassOf(name)
   }
+
+  /** Built once — the grouping is static, and the template reads it per case. */
+  readonly parties: Party[][] = CASES.map(partiesOf)
 
   // Off-platform destinations are not all alike to the app: one is a website it calls
   // over HTTP, the other a cloud service it calls through an SDK. To the mesh they are
@@ -255,6 +354,7 @@ export class App {
     return name.endsWith("amazonaws.com") ? "cloud service" : "public site"
   }
 
+  /** The hue of the pod a snippet belongs to — the same one that pod wears above. */
   isOpen(i: number): boolean {
     return this.openPanels().has(i)
   }
@@ -314,7 +414,7 @@ export class App {
 
   responseBody(i: number): string {
     const body = this.results()[i].body
-    if (/^\s*<(!doctype|html)/i.test(body)) return "(origin error page — no body from the app)"
+    if (/^\s*<(!doctype|html)/i.test(body)) return "(origin error page, no body from the app)"
     return body.length > 96 ? body.slice(0, 96) + " …" : body
   }
 
@@ -369,7 +469,7 @@ export class App {
       body = (await response.text()).trim().replace(/\s+/g, " ")
     } catch {
       code = 0
-      body = "no response — is the demo running?"
+      body = "no response. is the demo running?"
     }
     const ms = Math.round(performance.now() - started)
     clearInterval(tick)

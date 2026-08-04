@@ -1,7 +1,29 @@
+/** A real file behind a snippet on the page. */
+export interface Source {
+  /** Shown in mono. The file the reader would open. */
+  file: string
+  /** What to look at once it opens. */
+  note: string
+  url: string
+  /** Steers the link target, and the hover title. As a visible badge it competed with
+   *  the filename for a line whose job is naming one file. */
+  lines?: string
+}
+
+/** One file, or one rendered object. Never two of either in the same block. Stacked in
+ *  a single box, a reader has to find the divider before knowing what they are reading. */
+export interface Snippet {
+  code: string
+  sources: Source[]
+  /** Whose pod this belongs to. Colours the block in that actor's hue, so a reader
+   *  tracks ownership by sight instead of by counting rows across two columns. */
+  actor?: "caller" | "callee"
+}
+
 export interface Case {
   kind: string
   title: string
-  grug: string
+  summary: string
   /** Absent on the closing card, which explains rather than calls. */
   call?: {
     from: string
@@ -13,21 +35,23 @@ export interface Case {
     enforcedAt: "downstream" | "upstream"
     /** What the mesh should answer. Anything else means the demo is not wired up. */
     expect: number
+    /** Shown beside the status when the code alone would read as a broken demo. */
+    codeNote?: string
     why: string
   }
   deep: string
-  downstream?: string
+  /** Why the callee column is empty. Only read when that pod renders nothing. */
   upstream?: string
-  /** What the team writes. */
-  yaml?: string
-  /** What the platform renders from it, in Istio's own words. */
-  istio?: string
-  /** The real files behind the snippet — the declaration, and what renders it. */
-  sources: { label: string; url: string }[]
+  /** What the team writes, one block per file. */
+  declared?: Snippet[]
+  /** What the platform renders from it, one block per object. */
+  rendered?: Snippet[]
+  /** Standalone reading, for a card with no snippet to sit under. */
+  docs?: Source[]
 }
 
-const WORKSPACES =
-  "https://github.com/cujarrett/homelab-workspaces/blob/main/platform-connections-demo"
+const WORKSPACES_SHA = "9ae890926b907af5337f051a129aea3a37e22225"
+const WORKSPACES = `https://github.com/cujarrett/homelab-workspaces/blob/${WORKSPACES_SHA}/platform-connections-demo`
 const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 
 // Pinned to a commit, not to main. A line range on a moving branch drifts silently and
@@ -36,24 +60,52 @@ const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 const COMPOSITION_SHA = "9eaac341b53a2017e16f3b56dafbed285c8becc3"
 const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
 
-function composition(label: string, lines: string) {
-  return { label: `Api composition — ${label}`, url: `${COMPOSITION}#${lines}` }
+// GitHub wants the hyphen in the anchor; the badge shows an en dash.
+function composition(note: string, from: number, to: number): Source {
+  return {
+    file: "platform/api/composition.yaml",
+    note,
+    lines: `L${from}–L${to}`,
+    url: `${COMPOSITION}#L${from}-L${to}`,
+  }
 }
 
-const API_COMPOSITION = {
-  label: "Api composition — renders the policy",
-  url: `${HOMELAB}/platform/api/composition.yaml`,
+function workspace(file: string, note: string, from: number, to: number): Source {
+  return {
+    file,
+    note,
+    lines: `L${from}–L${to}`,
+    url: `${WORKSPACES}/${file}#L${from}-L${to}`,
+  }
 }
-const DESIGN_DOC = {
-  label: "Service Mesh — design & build plan",
+
+const DESIGN_DOC: Source = {
+  file: "docs/platform-connections.md",
+  note: "the design and build plan behind all of this",
   url: `${HOMELAB}/docs/platform-connections.md`,
+}
+const NOTHING_NOVEL: Source = {
+  file: "docs/nothing-novel.md",
+  note: "every mechanism above, traced to the spec or vendor doc it came from",
+  url: `${HOMELAB}/docs/nothing-novel.md`,
+}
+const CROSSPLANE_ADOPTERS: Source = {
+  file: "crossplane/ADOPTERS.md",
+  note: "Nike, SAP, Autodesk, Grafana Labs and Nokia, on the control plane this runs on",
+  url: "https://github.com/crossplane/crossplane/blob/main/ADOPTERS.md",
+}
+const ISTIO_CASE_STUDIES: Source = {
+  file: "istio.io/case-studies",
+  note: "T-Mobile, eBay, Salesforce and Airbnb, on the mesh enforcing these calls",
+  url: "https://istio.io/latest/about/case-studies/",
 }
 
 export const CASES: Case[] = [
   {
     kind: "on-platform → on-platform",
     title: "Declared, so it works",
-    grug: "The API was told this caller may call it. That one line is the only reason this works.",
+    summary:
+      "Two declarations, one on each side: the caller's way out, the callee's guest list. The call works only because both are there.",
     call: {
       from: "authorized-api",
       to: "upstream-api",
@@ -64,20 +116,48 @@ export const CASES: Case[] = [
       request: "GET upstream-api/api/v1/data",
       why: "<b>Allowed.</b> The caller's identity is named in the policy, so it passes.",
     },
-    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. This caller's identity is in a rule, so it passes.</p>
-<p>The grant is coarse by default: no methods or paths means the whole API. Narrow it only when one API has more than one trust boundary, such as <code>/public/</code> versus <code>/admin/</code>.</p>`,
-    downstream:
-      "Declares nothing. A caller needs no declaration to reach an app in its own namespace.",
-    upstream:
-      "<code>provides.allowedCallers</code> → an <code>AuthorizationPolicy</code> on the way in. This caller is named in a rule, so it passes.",
-    yaml: `# upstream-api — the callee
-provides:
+    deep: `<p>This call needed two yeses: one from the caller's pod to let it out, one from the callee's pod to let it in. Sharing a namespace is neither.</p>
+<p><b>Neither team wrote a service mesh policy.</b> One declared the calls it makes, the other declared who may call it. Neither has to know a service mesh exists, and that is the point. Platform engineering is the difference between understanding a mesh and shipping without needing to.</p>`,
+    declared: [
+      {
+        code: `consumes:
+  # ↓ lets the call out
+  - namespace: platform-connections-demo
+    app: upstream-api`,
+        sources: [workspace("authorized-api.yaml", "the caller's way out", 25, 27)],
+        actor: "caller",
+      },
+      {
+        code: `provides:
   - name: data
     allowedCallers:
-      # ↓ the only caller granted
+      # ↓ lets the call in
       - namespace: platform-connections-demo
         app: authorized-api`,
-    istio: `# lands on upstream-api's own pod
+        sources: [workspace("upstream-api.yaml", "the callee's guest list", 14, 17)],
+        actor: "callee",
+      },
+    ],
+    rendered: [
+      {
+        code: `# the way out
+apiVersion: networking.istio.io/v1
+kind: Sidecar
+metadata:
+  name: authorized-api
+spec:
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY
+  egress:
+    - hosts:
+        - "istio-system/*"   # istiod, where the sidecar gets its config and certs
+        # ↓ the one app it declared. no wildcard, so nothing else
+        - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"`,
+        sources: [composition("the Sidecar egress list", 790, 828)],
+        actor: "caller",
+      },
+      {
+        code: `# the way in
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -93,16 +173,17 @@ spec:
             principals:
               # ↓ the identity the caller proved with its certificate
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-              # no methods, no paths — the grant is the whole API`,
-    sources: [
-      { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      composition("AuthorizationPolicy", "L740-L789"),
+              # no method or path limits, so the grant is the whole API`,
+        sources: [composition("the AuthorizationPolicy template", 740, 789)],
+        actor: "callee",
+      },
     ],
   },
   {
     kind: "on-platform → on-platform",
     title: "Not declared, so it is refused",
-    grug: "Same API, same image, same network as the last call. This caller was never named, so it is turned away before the app ever sees it.",
+    summary:
+      "Same callee, same image, and it declared the same way out. It is missing from the callee's guest list, so it is turned away before the app ever sees it.",
     call: {
       from: "unauthorized-api",
       to: "upstream-api",
@@ -111,22 +192,35 @@ spec:
       enforcedAt: "upstream",
       expect: 403,
       request: "GET upstream-api/api/v1/data",
-      why: "<b>Denied.</b> Nothing was wrong with the caller — it simply was not on the list.",
+      why: "<b>Denied.</b> Nothing was wrong with the caller. It simply was not on the list.",
     },
-    deep: `<p>The callee declares who may call it, which renders one <code>AuthorizationPolicy</code> onto its own pod. The first ALLOW policy to select a workload makes that workload deny-by-default, so anything unnamed is refused — and this caller is not named. Both callers run a byte-identical image; only the declaration differs, which is the whole point.</p>
-<p><b>Could a pod just claim to be someone else?</b> No. Identity is not a name in a header — every meshed pod holds an X.509 certificate issued to its service account, and <code>PeerAuthentication</code> in STRICT mode refuses any peer that cannot present one. The name is only checked after the certificate proves it.</p>`,
-    downstream:
-      "Declares nothing. Its request leaves normally — it is stopped at the far end, not this one.",
-    upstream:
-      "<code>provides.allowedCallers</code> → <code>AuthorizationPolicy</code> on the way in. Returns 403.",
-    yaml: `# upstream-api — the callee
-provides:
+    deep: `<p>upstream-api names one caller in its policy: authorized-api. unauthorized-api is not on the list so it is refused. The two callers are otherwise identical — same image, same declared way out. Only the guest list differs.</p>
+<p><b>Could a pod claim to be someone else?</b> No. Identity is not a name in a header. Every meshed pod carries a certificate proving its SPIFFE identity, and STRICT mTLS refuses any peer that cannot present one. The name is checked only after the certificate proves it.</p>`,
+    declared: [
+      {
+        code: `consumes:
+  # ↓ the same line the last caller wrote, so it left its own pod fine
+  - namespace: platform-connections-demo
+    app: upstream-api`,
+        sources: [
+          workspace("unauthorized-api.yaml", "the caller, same image, same way out", 15, 16),
+        ],
+        actor: "caller",
+      },
+      {
+        code: `provides:
   - name: data
     allowedCallers:
       - namespace: platform-connections-demo
         app: authorized-api
 # unauthorized-api is absent, so it is denied`,
-    istio: `# both land on upstream-api's own pod
+        sources: [workspace("upstream-api.yaml", "the guest list it is missing from", 14, 17)],
+        actor: "callee",
+      },
+    ],
+    rendered: [
+      {
+        code: `# no certificate, no conversation
 apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
@@ -135,8 +229,12 @@ spec:
   selector:
     matchLabels: { app.kubernetes.io/instance: upstream-api }
   mtls:
-    mode: STRICT   # no certificate, no conversation
----
+    mode: STRICT`,
+        sources: [composition("the PeerAuthentication template", 716, 739)],
+        actor: "callee",
+      },
+      {
+        code: `# the guest list
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
@@ -151,16 +249,17 @@ spec:
         - source:
             principals:
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-# unauthorized-api names no rule, and ALLOW makes the rest a wall`,
-    sources: [
-      { label: "upstream-api.yaml — the grant", url: `${WORKSPACES}/upstream-api.yaml` },
-      composition("PeerAuth + AuthorizationPolicy", "L716-L789"),
+# unauthorized-api appears in no rule, so it is refused`,
+        sources: [composition("the AuthorizationPolicy template", 740, 789)],
+        actor: "callee",
+      },
     ],
   },
   {
     kind: "on-platform → off-platform",
     title: "A registered address works",
-    grug: "Now outward. This app declared one address on the internet, so the call to it goes out.",
+    summary:
+      "The destination is on the internet now, outside the cluster and outside the mesh. The caller declared that one address, so the call goes out.",
     call: {
       from: "authorized-api",
       to: "api.open-meteo.com",
@@ -171,17 +270,21 @@ spec:
       request: "GET https://api.open-meteo.com/v1/forecast",
       why: "<b>Allowed.</b> Declaring the host is what makes it reachable.",
     },
-    deep: `<p>Declaring the host renders a <code>ServiceEntry</code>, putting it in this pod's registry, and adds it to the <code>Sidecar</code> egress list. Both are needed: the entry makes the address known, the egress line makes it permitted for this workload specifically.</p>
-<p>That second part matters. A <code>ServiceEntry</code> is registered namespace-wide, so without the per-workload egress line a neighbour in the same namespace would inherit the ability to reach it.</p>`,
-    downstream:
-      "<code>consumes.host</code> → a <code>ServiceEntry</code> plus an egress entry, both scoped to this pod.",
+    deep: `<p>One declared hostname renders both halves: a <code>ServiceEntry</code> to make the address known, and a <code>Sidecar</code> egress line to let this pod reach it. Known is not permitted.</p>`,
     upstream:
-      "Nothing. The site checks no identity — the mesh controls which workload may reach it, from this end.",
-    yaml: `# authorized-api — the caller
-consumes:
+      "Nothing. The site checks no identity, so the mesh alone controls which workload may reach it.",
+    declared: [
+      {
+        code: `consumes:
   - host: api.open-meteo.com
 # declared, so this one is reachable`,
-    istio: `# both land on authorized-api's own pod
+        sources: [workspace("authorized-api.yaml", "the declared host", 25, 26)],
+        actor: "caller",
+      },
+    ],
+    rendered: [
+      {
+        code: `# makes the address known
 apiVersion: networking.istio.io/v1
 kind: ServiceEntry
 metadata:
@@ -195,8 +298,12 @@ spec:
   ports:
     - number: 443
       name: tls
-      protocol: TLS      # the app's own TLS passes straight through
----
+      protocol: TLS      # the app's own TLS passes straight through`,
+        sources: [composition("the ServiceEntry per declared host", 851, 876)],
+        actor: "caller",
+      },
+      {
+        code: `# makes it this pod's to reach
 apiVersion: networking.istio.io/v1
 kind: Sidecar
 metadata:
@@ -204,18 +311,18 @@ metadata:
 spec:
   egress:
     - hosts:
-        - "istio-system/*"
-        - "./api.open-meteo.com"   # known is not enough — this line permits it
-# the entry makes the host known, the egress line makes it this pod's to reach`,
-    sources: [
-      { label: "authorized-api.yaml — the declaration", url: `${WORKSPACES}/authorized-api.yaml` },
-      composition("Sidecar egress list", "L790-L828"),
+        - "istio-system/*"   # istiod, where the sidecar gets its config and certs
+        - "./api.open-meteo.com"   # known is not enough, this line permits it`,
+        sources: [composition("the Sidecar egress list", 790, 828)],
+        actor: "caller",
+      },
     ],
   },
   {
     kind: "on-platform → off-platform",
     title: "An unregistered address is refused",
-    grug: "Same app, same internet, one call later. This address was never declared, so the request does not even leave the pod.",
+    summary:
+      "Same app, same internet, one call later. This address was never declared, so the request does not even leave the pod.",
     call: {
       from: "authorized-api",
       to: "example.com",
@@ -224,20 +331,32 @@ spec:
       enforcedAt: "downstream",
       expect: 502,
       request: "GET https://example.com",
+      codeNote: "its own sidecar answered, example.com was never contacted",
       why: "<b>Blocked on the way out.</b> The packet never reaches the internet.",
     },
-    deep: `<p>Off-platform is the mirror image of the first two calls. There is no pod on the far end to hold a policy, so the only place to decide is the caller's own side, on the way out.</p>
-<p>Its <code>Sidecar</code> runs in <code>REGISTRY_ONLY</code> mode: it may reach cluster services in its own namespace, the control plane, and the hosts it declared. Nothing else exists as far as it is concerned.</p>`,
-    downstream:
-      "<code>Sidecar</code> + <code>REGISTRY_ONLY</code> on its outbound side. <code>example.com</code> is not listed, so the call dies here.",
+    deep: `<p>There is no pod on the far end to hold a policy, so the only place to decide is the caller's own side, on the way out.</p>
+<p>Its <code>Sidecar</code> runs <code>REGISTRY_ONLY</code>: the control plane, its own namespace, and the hosts it declared. Nothing else exists as far as it is concerned. No team asked for that default, and none can forget it.</p>`,
     upstream:
-      "Nothing. It is a website on the internet — outside the mesh, and it never learns the call was attempted.",
-    yaml: `# authorized-api — the caller
-consumes:
+      "Nothing. It is a website on the internet, outside the mesh, and it never learns the call was attempted.",
+    declared: [
+      {
+        code: `consumes:
   - host: api.open-meteo.com
 # example.com is absent, so it is unreachable`,
-    istio: `# lands on authorized-api's own pod
-apiVersion: networking.istio.io/v1
+        sources: [
+          workspace(
+            "authorized-api.yaml",
+            "every host it declared, and example.com is not one",
+            25,
+            27,
+          ),
+        ],
+        actor: "caller",
+      },
+    ],
+    rendered: [
+      {
+        code: `apiVersion: networking.istio.io/v1
 kind: Sidecar
 metadata:
   name: authorized-api
@@ -248,18 +367,19 @@ spec:
     mode: REGISTRY_ONLY   # unknown address means no address
   egress:
     - hosts:
-        - "istio-system/*"          # the control plane
+        - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so there is nowhere to send it`,
-    sources: [
-      { label: "authorized-api.yaml — the declaration", url: `${WORKSPACES}/authorized-api.yaml` },
-      composition("Sidecar egress list", "L790-L828"),
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 790, 828)],
+        actor: "caller",
+      },
     ],
   },
   {
     kind: "on-platform → off-platform",
     title: "A bound resource declares itself",
-    grug: "The app writes an object to cloud storage, reads it back, then deletes it. It never declared the address — asking for the bucket was the declaration.",
+    summary:
+      "The app writes an object to cloud storage, reads it back, then deletes it. It never declared the address. Asking for the bucket was the declaration.",
     call: {
       from: "authorized-api",
       to: "s3.amazonaws.com",
@@ -270,17 +390,24 @@ spec:
       request: "PutObject → GetObject → DeleteObject",
       why: "<b>Allowed.</b> The bucket reference is what opened the path to it.",
     },
-    deep: `<p>Off-platform hosts normally go in <code>consumes</code>. This one does not. Asking for a bucket already names the endpoint, so the platform registers it — the same way it registers a cache the app made.</p>
-<p><b>There is a hidden call first.</b> Before touching the bucket, a sidecar trades this pod's certificate for temporary cloud credentials. That is two more endpoints the app never named, and unregistered means blackholed, so the platform registers those too. Miss them and the pod starts fine, then fails every call with nothing pointing at the mesh.</p>
-<p>Nothing is left behind: the object is written, read back to prove it arrived, then deleted.</p>`,
-    downstream:
-      "<code>objectStorageRefs</code> → a <code>ServiceEntry</code> and egress entry per endpoint, plus the credential endpoints.",
-    upstream: "Nothing. Cloud storage is outside the mesh, so gates 3 and 4 do not exist for it.",
-    yaml: `# authorized-api — the caller
-objectStorageRefs:
+    deep: `<p>Off-platform hosts normally go in <code>consumes</code>. This one does not. Asking for a bucket already identifies the endpoint, so the platform registers it.</p>
+<p><b>There is a hidden call first.</b> Before touching the bucket, a sidecar trades this pod's certificate for temporary cloud credentials. Two more endpoints the app never declared, and unregistered means blackholed, so the platform registers those too. Miss them and the pod starts fine, then fails every call with nothing pointing at the mesh.</p>`,
+    upstream: "Nothing. Cloud storage is outside the mesh.",
+    declared: [
+      {
+        code: `objectStorageRefs:
   - name: assets
-# no consumes entry for the endpoint — the ref is the declaration`,
-    istio: `# rendered from the ref alone
+# no consumes entry for the endpoint, the ref is the declaration`,
+        sources: [
+          workspace("authorized-api.yaml", "the ref, which is the whole declaration", 16, 17),
+          workspace("assets.yaml", "the bucket it points at", 1, 9),
+        ],
+        actor: "caller",
+      },
+    ],
+    rendered: [
+      {
+        code: `# rendered from the ref alone
 apiVersion: networking.istio.io/v1
 kind: Sidecar
 metadata:
@@ -288,23 +415,26 @@ metadata:
 spec:
   egress:
     - hosts:
-        - "istio-system/*"
-        - "./rolesanywhere.us-east-1.amazonaws.com"  # credentials
-        - "./sts.us-east-1.amazonaws.com"            # credentials
+        - "istio-system/*"   # istiod, where the sidecar gets its config and certs
+        # ↓ the credential endpoints, which the app never declared
+        - "./rolesanywhere.us-east-1.amazonaws.com"
+        - "./sts.us-east-1.amazonaws.com"
+        # ↓ one host per bucket, not one endpoint for the whole region
         - "./platform-platform-connections-demo-assets.s3.us-east-1.amazonaws.com"
-        - "./s3.us-east-1.amazonaws.com"
-# one ServiceEntry per host, all from one line of YAML`,
-    sources: [
-      { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
-      { label: "assets.yaml — the bucket", url: `${WORKSPACES}/assets.yaml` },
-      composition("endpoint derivation", "L92-L111"),
-      composition("ServiceEntry", "L829-L852"),
+# one ServiceEntry per host too, all from one line of YAML`,
+        sources: [
+          composition("where the endpoints are derived from the refs", 92, 111),
+          composition("the Sidecar egress list", 790, 828),
+        ],
+        actor: "caller",
+      },
     ],
   },
   {
     kind: "on-platform → off-platform",
     title: "The same holds for a database",
-    grug: "Write an item, read it back, delete it. A different resource, a different endpoint, and again nothing was declared by hand.",
+    summary:
+      "Write an item, read it back, delete it. A different resource, a different endpoint, and again nothing was declared by hand.",
     call: {
       from: "authorized-api",
       to: "dynamodb.amazonaws.com",
@@ -315,17 +445,24 @@ spec:
       request: "PutItem → GetItem → DeleteItem",
       why: "<b>Allowed.</b> Same mechanism as the bucket, a different endpoint.",
     },
-    deep: `<p>A different resource, the same mechanism — which is the point. Every managed resource the platform offers resolves to an endpoint it already knows, so none of them belong in <code>consumes</code>.</p>
-<p>The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned for you, it can register for you — asking again would be asking for a fact it already holds.</p>
-<p>The read uses a consistent read, so the item cannot come back missing from a stale replica. A demo that fails one time in twenty teaches the wrong lesson.</p>`,
-    downstream:
-      "<code>nosqlRef</code> → a <code>ServiceEntry</code> and egress entry for the database endpoint.",
+    deep: `<p>Every resource the platform hands out has an address it already knows, so none of them belong in <code>consumes</code>.</p>
+<p>The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned, it registers.</p>`,
     upstream: "Nothing. The database is outside the mesh too.",
-    yaml: `# authorized-api — the caller
-nosqlRef:
+    declared: [
+      {
+        code: `nosqlRef:
   name: records
 # again no consumes entry`,
-    istio: `apiVersion: networking.istio.io/v1
+        sources: [
+          workspace("authorized-api.yaml", "the ref, which is the whole declaration", 18, 19),
+          workspace("records.yaml", "the table it points at", 1, 8),
+        ],
+        actor: "caller",
+      },
+    ],
+    rendered: [
+      {
+        code: `apiVersion: networking.istio.io/v1
 kind: ServiceEntry
 metadata:
   name: authorized-api-dynamodb-us-east-1-amazonaws-com
@@ -339,29 +476,32 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-    sources: [
-      { label: "authorized-api.yaml — the ref", url: `${WORKSPACES}/authorized-api.yaml` },
-      { label: "records.yaml — the table", url: `${WORKSPACES}/records.yaml` },
-      composition("endpoint derivation", "L92-L111"),
-      composition("ServiceEntry", "L829-L852"),
+        sources: [
+          composition("where the endpoints are derived from the refs", 92, 111),
+          composition("the ServiceEntry per derived endpoint", 829, 850),
+        ],
+        actor: "caller",
+      },
     ],
   },
   {
     kind: "where this stops",
     title: "Platform Connections stops at workload authorization",
-    grug: "Every call above was decided by which pod was calling. Never by who was using it.",
+    summary: "Every call above was decided by which pod was calling. Never by who was using it.",
     deep: `<p class="answers"><b>It answers</b></p>
 <ul>
-  <li>Can this workload call that workload?</li>
-  <li>Can this workload reach this database?</li>
-  <li>Can this workload use this bucket?</li>
+  <li>Can this pod call that pod?</li>
+  <li>Can this pod reach this database?</li>
+  <li>Can this pod use this bucket?</li>
 </ul>
 <p class="answers"><b>It does not answer</b></p>
 <ul class="not">
   <li>Can Alice view Order 123?</li>
   <li>Can Bob approve payroll?</li>
 </ul>
-<p>Those last two are about a person and a particular record.</p>`,
-    sources: [DESIGN_DOC],
+<p>Those last two are about a person and a particular record.</p>
+<hr class="close-rule" />
+<p><b>A mesh can already watch every call. So why declare?</b> Watching only shows what happened while something was looking, so the quarter-end job and the failover path are missing from that graph and live in production. Declaring costs a line in review. <i>Can we turn this off?</i> becomes a list of who declared it, not thirty days of silence, and an undeclared call is refused as it happens, not drawn on a dashboard for Monday.</p>`,
+    docs: [DESIGN_DOC, NOTHING_NOVEL, CROSSPLANE_ADOPTERS, ISTIO_CASE_STUDIES],
   },
 ]

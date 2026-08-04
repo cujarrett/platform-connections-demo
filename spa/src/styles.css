@@ -8,6 +8,10 @@
   --color-text-muted: #8492a6;
   --color-accent: #6366f1;
   --color-accent-hover: #4f46e5;
+  /* The accent is a fill and border colour — as small text on these surfaces it lands
+     near 3:1 and is genuinely hard to read. Anything accent-coloured that is text uses
+     this lighter indigo instead. */
+  --color-accent-text: #a5b4fc;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
@@ -124,11 +128,27 @@ pre code {
   padding: 0 2rem 5rem;
 }
 
+/* Tighter than it looks like it wants to be. The first Run button is the point of the
+   page, and every rem here pushes it further under the fold. */
 .hero {
-  padding: 4rem 0 3.5rem;
+  padding: 2.75rem 0 2.5rem;
   text-align: center;
   max-width: 40rem;
   margin: 0 auto;
+}
+
+/* Optically centred on the cap height rather than the line box, which sits it low.
+   Wraps with the heading on narrow screens. */
+.hero h1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+.hero app-launchpad-mark {
+  --mark-size: 2.6rem;
+  transform: translateY(0.04em);
 }
 
 /* Let the browser even out line lengths instead of leaving an orphan word. */
@@ -151,8 +171,8 @@ pre code {
   transition: color 0.15s;
 }
 .hero .sub a:hover {
-  color: var(--color-accent);
-  text-decoration-color: var(--color-accent);
+  color: var(--color-accent-text);
+  text-decoration-color: var(--color-accent-text);
 }
 
 .lede {
@@ -175,19 +195,34 @@ h1 {
   color: var(--color-text);
   font-weight: 600;
 }
-/* One case per band. Sized by its content — a viewport-tall band leaves a
-   dead zone on wide screens, and the scroll trigger does not need the height. */
+/* One rail, drawn once, on the band itself. The heading, the card and the detail panel
+   all hang off the same line, so they read as one thing. Drawn per-child it came out as
+   two disconnected dashes at the same x, which looks like a mistake rather than a link. */
 .case {
   padding: 2.75rem 0;
   scroll-margin-top: 1.5rem;
   border-top: 1px solid var(--color-border);
+  border-left: 2px solid transparent;
+  /* Held whether or not the rail is coloured yet. Animating the indent moved only the
+     heading before; on the whole band it slides the card sideways as the call lands. */
+  padding-left: 0.9rem;
+  margin-left: -0.9rem;
   display: grid;
   grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
   gap: 2.5rem;
   align-items: start;
+  transition: border-color 0.6s ease;
+}
+.case.allow {
+  border-left-color: var(--color-success);
+}
+.case.deny {
+  border-left-color: var(--color-error);
+}
+.case.broken {
+  border-left-color: var(--color-warning);
 }
 
-/* Below two columns the narrative stacks above its card. */
 @media (max-width: 900px) {
   .case {
     grid-template-columns: 1fr;
@@ -195,46 +230,21 @@ h1 {
   }
 }
 
-.narrative {
-  /* Not sticky. It used to follow the card down, but the details panel is now a
-     full-width row below, and a stuck narrative scrolls straight over it. */
-  border-left: 2px solid transparent;
-  padding-left: 0;
-  margin-left: -0.9rem;
-  transition:
-    border-color 0.6s ease,
-    padding-left 0.4s ease;
-}
-.narrative.allow,
-.narrative.deny,
-.narrative.broken {
-  padding-left: 0.9rem;
-}
-.narrative.allow {
-  border-left-color: var(--color-success);
-}
-.narrative.deny {
-  border-left-color: var(--color-error);
-}
-.narrative.broken {
-  border-left-color: var(--color-warning);
-}
-
 /* Tint rather than recolour — the heading stays readable, the verdict still lands. */
 .narrative h2 {
   transition: color 0.6s ease;
   text-wrap: balance;
 }
-.narrative .grug {
+.narrative .summary {
   text-wrap: pretty;
 }
-.narrative.allow h2 {
+.case.allow h2 {
   color: color-mix(in srgb, var(--color-success) 55%, var(--color-text));
 }
-.narrative.deny h2 {
+.case.deny h2 {
   color: color-mix(in srgb, var(--color-error) 55%, var(--color-text));
 }
-.narrative.broken h2 {
+.case.broken h2 {
   color: color-mix(in srgb, var(--color-warning) 55%, var(--color-text));
 }
 
@@ -243,16 +253,11 @@ h1 {
     border-color 0.6s ease,
     color 0.6s ease;
 }
-.narrative.allow .kind {
+.case.allow .kind {
   border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border));
 }
-.narrative.deny .kind {
+.case.deny .kind {
   border-color: color-mix(in srgb, var(--color-error) 45%, var(--color-border));
-}
-@media (max-width: 900px) {
-  .narrative {
-    position: static;
-  }
 }
 .case:first-of-type {
   border-top: none;
@@ -399,17 +404,6 @@ h2 {
   color: color-mix(in srgb, var(--actor) 65%, var(--color-text));
 }
 
-/* On platform versus off is carried by border style, never by hue — so it survives any
-   palette change. Dashed means there is no pod out there to hold a policy. */
-.pod-metro,
-.pod-example,
-.pod-s3,
-.pod-dynamo,
-.pod-site {
-  border-style: dashed;
-}
-
-/* The mesh strip inside each pod — where policy is actually enforced. */
 /* Flush to the pod's edges — no inset, no rounding, so it reads as the pod's own
    boundary rather than a chip sitting inside it. */
 .mesh {
@@ -694,9 +688,13 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* No reserved height. This used to hold space so a landing response could not resize
-   the card, but the details toggle appears on completion too and was never reserved —
-   the card grew anyway, so an empty box on every first view bought nothing. */
+/* A refusal that arrives as a 5xx reads as a broken demo until you know who wrote it. */
+.code-note {
+  flex-basis: 100%;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
 .body-slot {
   display: flex;
   align-items: baseline;
@@ -751,12 +749,60 @@ button:disabled {
 }
 
 /* ── Engineer detail ─────────────────────────────────────── */
-/* Spans both grid columns. Inside the card it was only as wide as the card and left
-   the narrative column empty, which wastes the width the YAML blocks want. */
+/* The rail on .case ties this to the card above it, so nothing is drawn here. */
 .deep-panel {
   grid-column: 1 / -1;
-  margin-top: 0;
-  border-top: 1px solid var(--color-border);
+  /* Pulls up out of the row gap so it reads as hanging off the card, not floating. */
+  margin-top: -1.6rem;
+}
+
+/* The question that was clicked, repeated as the panel's own head. Without it the panel
+   opened on body prose and the answer had nothing naming it. Also closes the panel, so
+   a long one can be dismissed without scrolling back up to the card. */
+.deep-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0 0 0.7rem;
+  margin-bottom: 0.3rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+}
+/* Same glyph the deciding sidecar shows in the diagram, so the panel is visibly the
+   answer to that call and not to any of the others on the page. */
+.deep-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+.deep-panel.allow .deep-mark {
+  color: var(--color-success);
+}
+.deep-panel.deny .deep-mark {
+  color: var(--color-error);
+}
+.deep-panel.broken .deep-mark {
+  color: var(--color-warning);
+}
+.deep-head .sum-chev {
+  transform: rotate(90deg);
+}
+.deep-head:hover {
+  color: var(--color-accent-text);
 }
 
 /* The trigger stays in the card with the call it explains. Reads as an offer,
@@ -780,7 +826,7 @@ button:disabled {
   transition: color 0.15s;
 }
 .deep-toggle:hover {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 /* Base layout lives here, not under :hover — nested in the hover rule the chevron
    jumped to the right the moment the pointer landed on it. */
@@ -791,10 +837,7 @@ button:disabled {
   transition: transform 0.25s ease;
 }
 .deep-toggle:hover .sum-chev {
-  color: var(--color-accent);
-}
-.deep-toggle.open .sum-chev {
-  transform: rotate(90deg);
+  color: var(--color-accent-text);
 }
 
 .deep {
@@ -822,56 +865,137 @@ button:disabled {
 .deep ul.not li {
   color: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-error));
 }
+/* Marks where scope ends and the closing argument begins — five ideas in one card
+   otherwise read as one undifferentiated block. */
+.close-rule {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.3rem 0 1rem;
+}
+/* Enough to lift a lead-in off the body, not enough to shout. Full weight against muted
+   body text made every bold phrase read as a heading competing with the panel's own. */
 .deep b {
-  color: var(--color-text);
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 75%, var(--color-text-muted));
 }
 
-/* Even halves, same as .yaml-pair below it — caller left, callee right. */
-.sides {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.75rem;
-  margin-top: 0.95rem;
+/* ── Snippet blocks ──────────────────────────────────────── */
+/* One file, or one rendered object, headed by a link to the real thing. Header on top
+   rather than underneath, because stacked blocks otherwise present a wall of YAML
+   before the reader learns whose it is. */
+.snippet + .snippet {
+  margin-top: 1.4rem;
 }
-.sides > div {
-  background: var(--color-surface-alt);
+.yaml-col pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top: none;
+  margin-top: 0;
+}
+.srcs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+/* One row: what this block is on the left, the file it came from on the right. Role,
+   file and description stacked was three lines of label before a line of code. */
+.yaml-col .srcs {
+  flex-flow: row wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.2rem 1rem;
+  padding: 0.6rem 1rem 0.65rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 0.6rem 0.8rem;
-  font-size: 0.82rem;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--color-surface-alt);
 }
-/* Same treatment as the hero link — underlined text, not a pill. Pills wrapped onto a
-   second row and read as buttons that do something, when these just navigate. The
-   heading is what keeps them from being missed. */
-.sources-h {
-  margin-top: 1.5rem;
+/* Two files behind one block (a ref, and the thing it points at) stack against the
+   right edge rather than widening the row. */
+.src-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
 }
-.sources {
+/* The closing card has no snippet to hang off, so it stays a plain line of text. */
+.deep > .srcs {
+  margin-top: 0.9rem;
+}
+.src-role {
+  font-size: 0.58rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.src {
   display: flex;
   flex-flow: row wrap;
-  gap: 0.4rem 1.4rem;
-  margin-top: 0.5rem;
-}
-.sources a {
-  font-size: 0.78rem;
+  align-items: baseline;
+  gap: 0.1rem 0.4rem;
+  font-size: 0.68rem;
+  line-height: 1.5;
   color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--color-border);
-  transition: color 0.15s;
+  text-decoration: none;
 }
-.sources a:hover {
-  color: var(--color-accent);
-  text-decoration-color: var(--color-accent);
-}
-.sources a:focus-visible {
+.src:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 3px;
 }
+.src-file {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--color-border);
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.src:hover .src-file {
+  color: var(--color-accent-text);
+  text-decoration-color: var(--color-accent-text);
+}
+/* Next to what it opens. At the far right of an empty run it read as a stray glyph. */
+.src-go {
+  font-size: 0.62rem;
+  transition:
+    color 0.15s,
+    transform 0.15s;
+}
+.src:hover .src-go {
+  color: var(--color-accent-text);
+  transform: translate(1px, -1px);
+}
+/* Drops to its own line before the filename is ever forced to break. */
+.src-note {
+  flex: 1 1 14ch;
+}
+
+/* The heading alone carries the pod's hue. Blocks had a coloured left edge too, which
+   put a second green line a few pixels inside the band's own verdict rail and read as a
+   rendering fault. The .pod-* class sets --actor and nothing else, so one rule covers
+   every actor including off-platform destinations. */
+.yaml-col .yaml-h {
+  color: var(--actor, var(--color-text-muted));
+}
+
+/* Answers "why is this column empty", which is the question the gap raises. Muted and
+   unboxed so it never looks like a snippet that failed to load. */
+.party-note {
+  padding: 10px;
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
 
 /* Sits directly on the snippet it names, so the pre below drops its own top margin. */
 .yaml-h {
+  padding: 10px;
   font-size: 0.62rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -879,33 +1003,18 @@ button:disabled {
   margin-top: 0.95rem;
   color: var(--color-text-muted);
 }
-.yaml-h + pre {
-  margin-top: 0.3rem;
+.yaml-col > .yaml-h + .snippet {
+  margin-top: 0.6rem;
 }
 
-/* Same two tracks as .case and .sides, so the split runs as one line down the page. */
-/* Even halves, matching .sides above. Left is always the caller, right is always the
-   callee, and content never crosses the middle — that mapping is the whole point of
-   putting the stack on a side, so it outranks giving the YAML more room. */
+/* Equal widths make the comparison honest. More room for the rendered side would read
+   as a layout choice rather than the point. align-items is not start: the sticky block
+   below needs the full row height to have anywhere to travel. */
 .yaml-pair {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.75rem;
-  align-items: start;
-}
-/* Callee-owned by default — the wide right track, under the callee box above it. */
-.yaml-stack {
-  grid-column: 2;
-  min-width: 0;
-}
-/* Caller-owned: same tracks, but the stack moves to the left column and the wide track
-   moves with it, so the rendered Istio keeps its room wherever it sits. */
-/* Same halves either way — only which one holds the stack changes. */
-.yaml-pair.owner-caller {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-.yaml-pair.owner-caller .yaml-stack {
-  grid-column: 1;
+  gap: 2.5rem;
+  margin-top: 0.4rem;
 }
 
 /* Each column scrolls its own long lines rather than widening the grid. */
@@ -917,21 +1026,13 @@ button:disabled {
     grid-template-columns: 1fr;
     gap: 0;
   }
-}
-
-.sides .h {
-  font-size: 0.62rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-  color: var(--color-text-muted);
+  /* The row gap shrinks with the stacked layout, so the pull that closes it does too. */
+  .deep-panel {
+    margin-top: -0.25rem;
+  }
 }
 
 @media (max-width: 620px) {
-  .sides {
-    grid-template-columns: 1fr;
-  }
   .call {
     flex-direction: column;
   }
@@ -969,9 +1070,12 @@ button:disabled {
     min-width: 0;
   }
 
-  /* The body and its "Envoy wrote this" note cannot share a line at this width —
-     the note never wraps, so it pushed the body down to a single column of letters
-     and ran off the card. Stack them and let the note wrap. */
+  .code-note {
+    flex-basis: 100%;
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+  }
+
   .body-slot {
     margin-top: 0.4rem;
     flex-wrap: wrap;
