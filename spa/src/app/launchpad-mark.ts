@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from "@angular/core"
 
-// The brand mark — brackets holding an ascending arrow. Sized by the parent
+// The brand mark - brackets holding an ascending arrow. Sized by the parent
 // through --mark-size so callers never touch the geometry.
 // Kept in step with launchpad/src/app/core/launchpad-mark.ts. Copied rather than
 // shared: two standalone repos with no package between them, and the geometry is
@@ -37,7 +37,7 @@ import { ChangeDetectionStrategy, Component, input } from "@angular/core"
         stroke-linecap: round;
         stroke-linejoin: round;
       }
-      /* Filled, not stroked — round linejoins on a short chevron blob out into a
+      /* Filled, not stroked - round linejoins on a short chevron blob out into a
          mushroom once the mark is rendered large. */
       .arrow {
         fill: var(--mark-arrow, #c7d2fe);

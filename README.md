@@ -2,7 +2,7 @@
 
 Demo apps behind [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo.
 
-Three apps in one namespace. Two of them run a byte-identical image and differ only in what they declare — which is the whole point.
+Three apps in one namespace. Two of them run a byte-identical image and differ only in what they declare - which is the whole point.
 
 | App | Role |
 |---|---|
@@ -23,4 +23,4 @@ That port-forwards the two callers and serves the walkthrough against them. The 
 
 Needs `kubectl` pointed at the homelab, plus `just` and Node. `just --list` shows the rest.
 
-Each Go app has its own `justfile` — `just ci` to lint, test and build.
+Each Go app has its own `justfile` - `just ci` to lint, test and build.

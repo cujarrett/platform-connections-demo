@@ -22,12 +22,12 @@ const (
 	weatherURL = "https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&current_weather=true"
 	// leakURL is deliberately unregistered (proves REGISTRY_ONLY blocks it).
 	leakURL = "https://example.com"
-	// maxResponseBytes caps how much of an upstream response we buffer — upstreams are
+	// maxResponseBytes caps how much of an upstream response we buffer - upstreams are
 	// external, so an unbounded read would let a large response OOM the pod.
 	maxResponseBytes = 1 << 20 // 1 MiB
 )
 
-// httpClient does not follow redirects — a redirect to an internal address would be
+// httpClient does not follow redirects - a redirect to an internal address would be
 // an SSRF vector. Return the redirect response as-is instead of chasing it.
 var httpClient = &http.Client{
 	Timeout: 5 * time.Second,
@@ -36,8 +36,8 @@ var httpClient = &http.Client{
 	},
 }
 
-// callKey labels one counter series. The label set is fixed and tiny — three targets,
-// four outcomes — so a plain map under a mutex is enough.
+// callKey labels one counter series. The label set is fixed and tiny - three targets,
+// four outcomes - so a plain map under a mutex is enough.
 type callKey struct {
 	target  string
 	outcome string
@@ -54,7 +54,7 @@ func record(target, outcome string) {
 	calls[callKey{target, outcome}]++
 }
 
-// outcome maps an upstream status onto the thing the demo is actually showing —
+// outcome maps an upstream status onto the thing the demo is actually showing -
 // 403 is how the mesh refuses an undeclared caller.
 func outcome(status int) string {
 	switch {
@@ -119,7 +119,7 @@ func main() {
 	}
 
 	// Platform convention: reach another app at <app>.<namespace>.svc.cluster.local.
-	// Nothing injects this — the name is deterministic, so there is no URL to declare.
+	// Nothing injects this - the name is deterministic, so there is no URL to declare.
 	apiURL := os.Getenv("API_URL")
 	if apiURL == "" {
 		apiURL = "http://upstream-api.platform-connections-demo.svc.cluster.local/api/v1/data"
@@ -184,7 +184,7 @@ func main() {
 	}
 }
 
-// callHandler proxies to the internal `api` service — proves internal registration + mTLS.
+// callHandler proxies to the internal `api` service - proves internal registration + mTLS.
 func callHandler(target string) http.HandlerFunc {
 	return proxyHandler("upstream-api", target)
 }

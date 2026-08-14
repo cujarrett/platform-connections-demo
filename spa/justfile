@@ -3,13 +3,13 @@ default:
     @just --list
 
 # Port-forward the demo APIs and serve the SPA against the real cluster.
-# Use this rather than `npm start` — without the forwards every call returns 500.
+# Use this rather than `npm start` - without the forwards every call returns 500.
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
     for port in 4200 18081 18082; do
         if lsof -ti:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
-            echo "port $port is already in use — run 'just stop' first" >&2
+            echo "port $port is already in use - run 'just stop' first" >&2
             exit 1
         fi
     done

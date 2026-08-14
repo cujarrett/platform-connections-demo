@@ -1,4 +1,4 @@
-/* ── Design tokens — shared with Launchpad ───────────────── */
+/* ── Design tokens - shared with Launchpad ───────────────── */
 :root {
   --color-bg: #0f1117;
   --color-surface: #1a1d27;
@@ -8,7 +8,7 @@
   --color-text-muted: #8492a6;
   --color-accent: #6366f1;
   --color-accent-hover: #4f46e5;
-  /* The accent is a fill and border colour — as small text on these surfaces it lands
+  /* The accent is a fill and border colour - as small text on these surfaces it lands
      near 3:1 and is genuinely hard to read. Anything accent-coloured that is text uses
      this lighter indigo instead. */
   --color-accent-text: #a5b4fc;
@@ -16,7 +16,7 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
 
-  /* Actor hues — referenced by the pods and by the wire, so a character keeps
+  /* Actor hues - referenced by the pods and by the wire, so a character keeps
      one colour wherever it appears. */
   --actor-authorized: #00e676;
   --actor-unauthorized: #f44336;
@@ -43,7 +43,7 @@
 
 html {
   scroll-behavior: smooth;
-  /* Reads as a walkthrough, not a dense app UI. This is the single size knob —
+  /* Reads as a walkthrough, not a dense app UI. This is the single size knob -
      everything below is in rem, so changing it scales the page like browser zoom. */
   font-size: 125%;
 }
@@ -67,7 +67,7 @@ code {
 }
 
 /* Scroll hint via background layers, not mask-image. A mask puts the element on its own
-   GPU layer, which Chrome colour-manages slightly differently from the root — a tall
+   GPU layer, which Chrome colour-manages slightly differently from the root - a tall
    block then shows as a faintly different shade of the same dark. It also faded the
    right border, since a mask dims everything including chrome.
    Here the fade is painted instead: the `local` layer scrolls with the content and the
@@ -92,7 +92,7 @@ pre code {
   padding: 0;
 }
 
-/* YAML syntax colours — see yaml-highlight.ts. Muted rather than neon so the
+/* YAML syntax colours - see yaml-highlight.ts. Muted rather than neon so the
    green here never competes with the green that means "allowed". */
 .y-key {
   color: #e58fbe;
@@ -121,7 +121,7 @@ pre code {
 
 /* ── Layout ──────────────────────────────────────────────── */
 .page {
-  /* Wide enough that the longest rendered line — the SPIFFE principal — fits in a
+  /* Wide enough that the longest rendered line - the SPIFFE principal - fits in a
      half-width column without scrolling. Below this it wraps or scrolls. */
   max-width: 72rem;
   margin: 0 auto;
@@ -230,7 +230,7 @@ h1 {
   }
 }
 
-/* Tint rather than recolour — the heading stays readable, the verdict still lands. */
+/* Tint rather than recolour - the heading stays readable, the verdict still lands. */
 .narrative h2 {
   transition: color 0.6s ease;
   text-wrap: balance;
@@ -315,7 +315,7 @@ h2 {
 }
 
 /* Two zones: the app on top, the mesh as a band flush to the pod's bottom edge. The
-   band is a boundary the traffic crosses, not a component the app calls — which is why
+   band is a boundary the traffic crosses, not a component the app calls - which is why
    the arrow meets it and why an off-platform box has none at all. */
 .pod {
   flex: 1;
@@ -342,7 +342,7 @@ h2 {
   color: var(--color-text-muted);
   margin-top: 0.3rem;
 }
-/* A ring, not a border colour — .pod.acting is two classes and would otherwise
+/* A ring, not a border colour - .pod.acting is two classes and would otherwise
    outrank the single-class actor colours, wiping the character hue off exactly the
    pod being pointed at. */
 .pod.acting {
@@ -364,7 +364,7 @@ h2 {
 
 /* One colour per actor. Each class sets --actor and nothing else; every surface below
    reads that one variable, so retuning a character is a one-line change and no rule can
-   silently cancel another — an earlier version wiped the fill on four of them. */
+   silently cancel another - an earlier version wiped the fill on four of them. */
 .pod-authorized {
   --actor: var(--actor-authorized);
 }
@@ -390,7 +390,7 @@ h2 {
   --actor: var(--color-text-muted);
 }
 
-/* Fill, edge, name and role all carry the hue — one weak signal reads as a palette,
+/* Fill, edge, name and role all carry the hue - one weak signal reads as a palette,
    four aligned ones read as a character. */
 .pod[class*="pod-"] {
   background: color-mix(in srgb, var(--actor) 26%, var(--color-surface-alt));
@@ -404,7 +404,7 @@ h2 {
   color: color-mix(in srgb, var(--actor) 65%, var(--color-text));
 }
 
-/* Flush to the pod's edges — no inset, no rounding, so it reads as the pod's own
+/* Flush to the pod's edges - no inset, no rounding, so it reads as the pod's own
    boundary rather than a chip sitting inside it. */
 .mesh {
   display: flex;
@@ -441,7 +441,7 @@ h2 {
 }
 
 /* Pinned to the bottom of the row so the arrow lines up with the mesh strips rather
-   than floating at title height. The strips are where the decision is made — an arrow
+   than floating at title height. The strips are where the decision is made - an arrow
    passing above them implies the traffic went somewhere else. */
 .wire {
   flex: 0 0 auto;
@@ -467,7 +467,7 @@ h2 {
   transition: opacity 0.2s;
 }
 /* Arrowhead from the border trick. Sides are declared explicitly rather than as a
-   shorthand with transparent edges — a transparent border still takes width, which
+   shorthand with transparent edges - a transparent border still takes width, which
    pushed the tip inside the bar and left it looking like a nub. */
 .leg::after {
   content: "";
@@ -484,7 +484,7 @@ h2 {
   border-left: 6px solid currentColor;
 }
 
-/* In flight — the leg reaches out and retracts, so it reads as travelling rather than
+/* In flight - the leg reaches out and retracts, so it reads as travelling rather than
    stalled. It stops short of the far box on purpose: mid-call, an arrival has not
    happened yet, and in the blocked case it never will. */
 .wire.flying .leg {
@@ -515,7 +515,7 @@ h2 {
 
 /* Refused at the caller's own side. Red because it was refused; still pointing out and
    stopping short because nothing came back and the callee never learned a call was
-   attempted. Colour says what happened, direction says where — that is the 502. */
+   attempted. Colour says what happened, direction says where - that is the 502. */
 .wire-stopped-near .leg {
   width: 55%;
   background: var(--color-error);
@@ -628,7 +628,7 @@ button.run {
   justify-content: center;
 }
 
-/* Answered, so it stops competing with the verdict — but a transparent button on
+/* Answered, so it stops competing with the verdict - but a transparent button on
    a dark card reads as absent, so it keeps a surface of its own. */
 button.run:not(.primary) {
   background: var(--color-surface-alt);
@@ -710,11 +710,11 @@ button:disabled {
   font-size: 0.74rem;
   color: var(--color-text-muted);
   min-width: 0;
-  /* anywhere, not break-all — break-all lets this shrink to one character per line
+  /* anywhere, not break-all - break-all lets this shrink to one character per line
      when the row is tight, which is what narrow screens did to it. */
   overflow-wrap: anywhere;
 }
-/* Envoy's own words on a denial — worth more than any label we could write. */
+/* Envoy's own words on a denial - worth more than any label we could write. */
 .body-text.denied {
   color: color-mix(in srgb, var(--color-error) 70%, var(--color-text));
 }
@@ -828,7 +828,7 @@ button:disabled {
 .deep-toggle:hover {
   color: var(--color-accent-text);
 }
-/* Base layout lives here, not under :hover — nested in the hover rule the chevron
+/* Base layout lives here, not under :hover - nested in the hover rule the chevron
    jumped to the right the moment the pointer landed on it. */
 .sum-chev {
   margin-left: auto;
@@ -865,7 +865,7 @@ button:disabled {
 .deep ul.not li {
   color: color-mix(in srgb, var(--color-text-muted) 80%, var(--color-error));
 }
-/* Marks where scope ends and the closing argument begins — five ideas in one card
+/* Marks where scope ends and the closing argument begins - five ideas in one card
    otherwise read as one undifferentiated block. */
 .close-rule {
   border: none;
@@ -985,7 +985,7 @@ button:disabled {
 
 /* Answers "why is this column empty", which is the question the gap raises. Same grey
    header treatment as a snippet's .srcs box, all four corners rounded since there is no
-   code block underneath it to join — a big empty frame read as a rendering fault. */
+   code block underneath it to join - a big empty frame read as a rendering fault. */
 .party-note {
   margin-top: 0.6rem;
   padding: 0.6rem 1rem 0.65rem;

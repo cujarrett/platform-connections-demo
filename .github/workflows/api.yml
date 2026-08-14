@@ -68,7 +68,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: cujarrett/homelab-workspaces/.github/workflows/update-image-tag.yml@main
     with:
-      # image must be set — the default derives from the repo name, and this repo
+      # image must be set - the default derives from the repo name, and this repo
       # builds three differently-named images out of one tree.
       image: ghcr.io/cujarrett/platform-connections-demo-api
       file: platform-connections-demo/upstream-api.yaml

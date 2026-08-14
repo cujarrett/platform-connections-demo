@@ -20,12 +20,12 @@ interface Party {
   label: string
   cls: string
   blocks: { snip: Snippet; role: string }[]
-  /** Stands in for the blocks when a pod renders nothing — off-platform callees. */
+  /** Stands in for the blocks when a pod renders nothing - off-platform callees. */
   note?: string
 }
 
 // Each on-platform app keeps one colour across every card so the reader tracks
-// actors by sight. Off-platform destinations share one muted colour — they are
+// actors by sight. Off-platform destinations share one muted colour - they are
 // scenery, not participants. Green and red stay reserved for call results.
 const POD_CLASS: Record<string, string> = {
   "authorized-api": "pod-authorized",
@@ -235,7 +235,7 @@ interface Result {
             </ng-template>
 
             <!-- One column per pod, in that pod's colour, in the same order as the
-                 diagram above — caller left, callee right. Each block is its own box so
+                 diagram above - caller left, callee right. Each block is its own box so
                  two files never share one scroll box with a blank line between them. -->
             <ng-template #partyCol let-party>
               <div class="yaml-col {{ party.cls }}">
@@ -276,7 +276,7 @@ interface Result {
                   </div>
                 }
                 <!-- Declaration left, rendered policy right, across the full width. The
-                     asymmetry is the point — a few lines written, all of that rendered —
+                     asymmetry is the point - a few lines written, all of that rendered -
                      and it only lands when the two are side by side at the same scale. -->
                 <div class="yaml-pair">
                   @for (party of parties[i]; track party.actor) {
@@ -294,7 +294,7 @@ interface Result {
             }
             <!-- Only after the call lands. The panel explains what just happened, so
                  offering it beforehand asks a question the reader has not met yet.
-                 Gone once open, because the panel's head below carries the same words —
+                 Gone once open, because the panel's head below carries the same words -
                  shown in both places the question reads as asked twice, rather than as
                  the one thing that moved. -->
             @if (c.call && results()[i].state === "done" && !isOpen(i)) {
@@ -333,18 +333,18 @@ export class App {
     CASES.map(() => ({ state: "idle", code: 0, ms: 0, body: "" })),
   )
 
-  // Which deep panels are open. A <details> cannot do this — the trigger sits in the
+  // Which deep panels are open. A <details> cannot do this - the trigger sits in the
   // card and the content spans both grid columns, so they are two separate elements.
   private readonly openPanels = signal<ReadonlySet<number>>(new Set())
 
   // Each on-platform app keeps one colour across every card so the reader tracks
-  // actors by sight. Off-platform destinations share one muted colour — they are
+  // actors by sight. Off-platform destinations share one muted colour - they are
   // scenery, not participants. Green and red stay reserved for call results.
   podClass(name: string): string {
     return podClassOf(name)
   }
 
-  /** Built once — the grouping is static, and the template reads it per case. */
+  /** Built once - the grouping is static, and the template reads it per case. */
   readonly parties: Party[][] = CASES.map(partiesOf)
 
   // Off-platform destinations are not all alike to the app: one is a website it calls
@@ -354,7 +354,7 @@ export class App {
     return name.endsWith("amazonaws.com") ? "cloud service" : "public site"
   }
 
-  /** The hue of the pod a snippet belongs to — the same one that pod wears above. */
+  /** The hue of the pod a snippet belongs to - the same one that pod wears above. */
   isOpen(i: number): boolean {
     return this.openPanels().has(i)
   }
@@ -375,7 +375,7 @@ export class App {
 
   /** "" until answered, "broken" when the answer is not one the mesh would give. */
   // Where the packet actually died decides how far the leg travels. A call refused at
-  // the caller's own side never crossed the wire — drawing it arriving and bouncing
+  // the caller's own side never crossed the wire - drawing it arriving and bouncing
   // back would teach the opposite of what the 502 means.
   wirePhase(i: number): string {
     const v = this.verdict(i)
@@ -476,7 +476,7 @@ export class App {
 
     // These calls answer in well under 100ms, which is faster than the eye can follow.
     // Hold the in-flight animation to a visible floor while freezing the displayed
-    // timing at what was actually measured — the number stays honest, the motion
+    // timing at what was actually measured - the number stays honest, the motion
     // becomes legible.
     this.patch(i, { state: "calling", code: 0, ms, body: "" })
     const remaining = App.MIN_FLIGHT_MS - (performance.now() - started)

@@ -194,7 +194,7 @@ spec:
       request: "GET upstream-api/api/v1/data",
       why: "<b>Denied.</b> Nothing was wrong with the caller. It simply was not on the list.",
     },
-    deep: `<p>upstream-api names one caller in its policy: authorized-api. unauthorized-api is not on the list so it is refused. The two callers are otherwise identical — same image, same declared way out. Only the guest list differs.</p>
+    deep: `<p>upstream-api names one caller in its policy: authorized-api. unauthorized-api is not on the list so it is refused. The two callers are otherwise identical - same image, same declared way out. Only the guest list differs.</p>
 <p><b>Could a pod claim to be someone else?</b> No. Identity is not a name in a header. Every meshed pod carries a certificate proving its SPIFFE identity, and STRICT mTLS refuses any peer that cannot present one. The name is checked only after the certificate proves it.</p>`,
     declared: [
       {

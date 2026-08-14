@@ -12,7 +12,7 @@ on:
 
 jobs:
   # Gates the build, matching api and downstream. There are no specs yet, so the
-  # check is formatting plus a full typecheck — tsc --noEmit is a real gate for a
+  # check is formatting plus a full typecheck - tsc --noEmit is a real gate for a
   # TypeScript app, and an always-green empty suite would be a worse signal.
   lint:
     runs-on: ubuntu-latest
@@ -77,7 +77,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: cujarrett/homelab-workspaces/.github/workflows/update-image-tag.yml@main
     with:
-      # image must be set — the default derives from the repo name, and this repo
+      # image must be set - the default derives from the repo name, and this repo
       # builds three differently-named images out of one tree.
       image: ghcr.io/cujarrett/platform-connections-demo-spa
       file: platform-connections-demo/connections-demo.yaml

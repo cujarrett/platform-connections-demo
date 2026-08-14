@@ -1,15 +1,15 @@
 ## Rules
 
 - **Never run `git commit`, `git push`, or any git command that writes to or modifies repository history or remotes.** If a task requires committing or pushing, stop and tell the user to run the git command manually.
-- **Whenever a task requires a commit, always give a suggested commit message** — never leave the user to write it themselves.
+- **Whenever a task requires a commit, always give a suggested commit message** - never leave the user to write it themselves.
 
 ### Pre-commit safety check
 
-Before telling the user to commit, always run `/security-review`. It reviews the pending changes on the current branch for security issues. Once it confirms the changes are safe, offer the user a suggested commit message — do not run `git commit` yourself.
+Before telling the user to commit, always run `/security-review`. It reviews the pending changes on the current branch for security issues. Once it confirms the changes are safe, offer the user a suggested commit message - do not run `git commit` yourself.
 
 ## Philosophy: Grug-Brained Development
 
-> "Complexity very, very bad." — [grugbrain.dev](https://grugbrain.dev/)
+> "Complexity very, very bad." - [grugbrain.dev](https://grugbrain.dev/)
 
 - **Say no.** The best weapon against complexity is the word "no". No new feature, no new abstraction, until it earns its place.
 - **No abstraction until a pattern repeats three times.** Let cut points emerge naturally from the code; don't invent them up front.
@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # downstream
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo — proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
+Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo - proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
 
 ## Commands
 | Command | What it does |
@@ -37,11 +37,11 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 | GET | `/healthz` | Liveness probe |
 | GET | `/api/call` | Calls `api` internally |
 | GET | `/api/weather` | Calls a registered external FQDN (`api.open-meteo.com`) |
-| GET | `/api/leak` | Calls an unregistered external FQDN (`example.com`) — must fail once `REGISTRY_ONLY` is enforced |
-| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) — the platform scrapes every Api, so this route is required |
+| GET | `/api/leak` | Calls an unregistered external FQDN (`example.com`) - must fail once `REGISTRY_ONLY` is enforced |
+| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) - the platform scrapes every Api, so this route is required |
 
 ## Conventions
-- No frameworks — stdlib `net/http` only
+- No frameworks - stdlib `net/http` only
 - `slog` for structured logging
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON

@@ -15,7 +15,7 @@ import (
 // Falls back to "dev" when running locally with go run.
 var version = "dev"
 
-// dataRequests counts successful reads of the protected endpoint — the number that
+// dataRequests counts successful reads of the protected endpoint - the number that
 // tells you whether connection enforcement is actually letting the caller through.
 var dataRequests atomic.Int64
 

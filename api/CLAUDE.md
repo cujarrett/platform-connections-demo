@@ -1,15 +1,15 @@
 ## Rules
 
 - **Never run `git commit`, `git push`, or any git command that writes to or modifies repository history or remotes.** If a task requires committing or pushing, stop and tell the user to run the git command manually.
-- **Whenever a task requires a commit, always give a suggested commit message** — never leave the user to write it themselves.
+- **Whenever a task requires a commit, always give a suggested commit message** - never leave the user to write it themselves.
 
 ### Pre-commit safety check
 
-Before telling the user to commit, always run `/security-review`. It reviews the pending changes on the current branch for security issues. Once it confirms the changes are safe, offer the user a suggested commit message — do not run `git commit` yourself.
+Before telling the user to commit, always run `/security-review`. It reviews the pending changes on the current branch for security issues. Once it confirms the changes are safe, offer the user a suggested commit message - do not run `git commit` yourself.
 
 ## Philosophy: Grug-Brained Development
 
-> "Complexity very, very bad." — [grugbrain.dev](https://grugbrain.dev/)
+> "Complexity very, very bad." - [grugbrain.dev](https://grugbrain.dev/)
 
 - **Say no.** The best weapon against complexity is the word "no". No new feature, no new abstraction, until it earns its place.
 - **No abstraction until a pattern repeats three times.** Let cut points emerge naturally from the code; don't invent them up front.
@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # api
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test (see `docs/platform-engineering-connections.md` in the homelab repo) — the protected upstream service that `authorized-api` and `unauthorized-api` call.
+Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test (see `docs/platform-engineering-connections.md` in the homelab repo) - the protected upstream service that `authorized-api` and `unauthorized-api` call.
 
 ## Commands
 | Command | What it does |
@@ -36,10 +36,10 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 |---|---|---|
 | GET | `/healthz` | Liveness probe |
 | GET | `/api/v1/data` | Protected data |
-| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) — the platform scrapes every Api, so this route is required |
+| GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) - the platform scrapes every Api, so this route is required |
 
 ## Conventions
-- No frameworks — stdlib `net/http` only
+- No frameworks - stdlib `net/http` only
 - `slog` for structured logging
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON

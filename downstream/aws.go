@@ -194,7 +194,7 @@ func tableHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	rt.Steps = append(rt.Steps, "PutItem")
 
-	// ConsistentRead so the read cannot be served by a stale replica — a demo
+	// ConsistentRead so the read cannot be served by a stale replica - a demo
 	// that intermittently reports "not found" teaches the wrong lesson.
 	got, err := client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: table, Key: key, ConsistentRead: aws.Bool(true),
