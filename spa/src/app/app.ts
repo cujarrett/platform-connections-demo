@@ -161,8 +161,8 @@ interface Result {
                     }
                   </div>
                   @if (call.enforcedAt === "upstream") {
-                    <div class="mesh gate">
-                      <span>service mesh</span>
+                    <div class="mesh gate" [class.by-app]="call.enforcedBy === 'app'">
+                      <span>{{ call.enforcedBy === "app" ? "app code" : "service mesh" }}</span>
                       <span class="mark" [class]="verdict(i)">{{ mark(i) }}</span>
                     </div>
                   }
@@ -210,7 +210,7 @@ interface Result {
               <div class="why-slot">
                 @if (verdict(i) === "broken") {
                   <p class="why broken">
-                    <b>Demo not connected.</b> Expected HTTP {{ call.expect }} from the mesh. Start
+                    <b>Demo not connected.</b> Expected HTTP {{ call.expect }}. Start
                     it with <code>just dev</code> from <code>spa/</code>.
                     <code>npm start</code> alone skips the port-forwards.
                   </p>

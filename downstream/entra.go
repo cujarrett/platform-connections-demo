@@ -110,22 +110,22 @@ func fetchEntraToken(ctx context.Context) (string, error) {
 	return entraCached, nil
 }
 
-// Both callers run this same code and both hold a real Entra identity. Only one was
-// granted the role, and that difference shows up at the callee, not here.
-func entraHandler(target string) http.HandlerFunc {
+// One token, two routes. The same identity is granted the role one of them needs and
+// not the other, so the difference shows up at the callee rather than here.
+func entraHandler(name, target string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token, err := fetchEntraToken(r.Context())
 		if err != nil {
 			// Not "denied" - this pod could not prove who it is, which is a broken
 			// platform rather than a working boundary.
-			record("entra", "error")
+			record(name, "error")
 			writeJSONError(w, "entra token exchange failed: "+err.Error(), http.StatusBadGateway)
 			return
 		}
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, target, nil)
 		if err != nil {
-			record("entra", "error")
+			record(name, "error")
 			writeJSONError(w, "build request failed", http.StatusInternalServerError)
 			return
 		}
@@ -133,12 +133,12 @@ func entraHandler(target string) http.HandlerFunc {
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
-			record("entra", "unreachable")
+			record(name, "unreachable")
 			writeJSONError(w, "upstream call failed", http.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close() //nolint:errcheck
-		record("entra", outcome(resp.StatusCode))
+		record(name, outcome(resp.StatusCode))
 
 		body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 		if err != nil {

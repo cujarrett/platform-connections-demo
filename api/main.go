@@ -39,8 +39,10 @@ func main() {
 	mux.HandleFunc("GET /healthz", healthHandler)
 	// Mesh-only. Whoever the mesh lets through is served.
 	mux.HandleFunc("GET /api/v1/data", dataHandler)
-	// Same connection rules as above, and then a role check.
-	mux.HandleFunc("GET /api/v1/protected", protectedHandler)
+	// Same connection rules as above, then a role check. These two differ only in
+	// which role they ask for - one the caller holds, one nobody does.
+	mux.HandleFunc("GET /api/v1/protected", entraRoleHandler(roleRead))
+	mux.HandleFunc("GET /api/v1/admin", entraRoleHandler(roleAdmin))
 	mux.HandleFunc("/", notFoundHandler)
 
 	srv := &http.Server{

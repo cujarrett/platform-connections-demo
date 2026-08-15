@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // roundTrip is what the walkthrough renders. Steps are listed in the order they
@@ -83,73 +82,6 @@ func writeRoundTrip(w http.ResponseWriter, rt roundTrip) {
 		w.WriteHeader(http.StatusBadGateway)
 	}
 	_ = json.NewEncoder(w).Encode(rt)
-}
-
-// storageHandler round-trips an object through the bound bucket: put, read back,
-// delete. Every call leaves the pod, so it exercises gates 1 and 2 for real.
-func storageHandler(w http.ResponseWriter, r *http.Request) {
-	rt := roundTrip{Binding: "object-storage"}
-	b, ok := readBinding("object-storage")
-	if !ok {
-		rt.Status, rt.Detail = "not_configured", "no object-storage binding mounted"
-		writeRoundTrip(w, rt)
-		return
-	}
-	if !hasProfile("object-storage") {
-		rt.Status, rt.Detail = "starting", "binding ready, waiting on credentials"
-		writeRoundTrip(w, rt)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
-	defer cancel()
-
-	cfg, err := awsConfig(ctx, "object-storage", b["region"])
-	if err != nil {
-		slog.Warn("s3 round trip failed", "op", "config", "err", err)
-		rt.Status, rt.Detail = "error", "credential load failed"
-		writeRoundTrip(w, rt)
-		return
-	}
-
-	client := s3.NewFromConfig(cfg)
-	bucket := aws.String(b["bucket"])
-	key := aws.String(fmt.Sprintf("connections-demo/%d", time.Now().UnixNano()))
-	body := fmt.Sprintf("round trip at %s", time.Now().UTC().Format(time.RFC3339))
-	start := time.Now()
-
-	if _, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: bucket, Key: key, Body: strings.NewReader(body),
-	}); err != nil {
-		slog.Warn("s3 round trip failed", "op", "put", "err", err)
-		rt.Status, rt.Detail = "error", "write failed"
-		writeRoundTrip(w, rt)
-		return
-	}
-	rt.Steps = append(rt.Steps, "PutObject")
-
-	obj, err := client.GetObject(ctx, &s3.GetObjectInput{Bucket: bucket, Key: key})
-	if err != nil {
-		slog.Warn("s3 round trip failed", "op", "get", "err", err)
-		rt.Status, rt.Detail = "error", "read failed"
-		writeRoundTrip(w, rt)
-		return
-	}
-	_ = obj.Body.Close()
-	rt.Steps = append(rt.Steps, "GetObject")
-
-	if _, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: bucket, Key: key}); err != nil {
-		slog.Warn("s3 round trip failed", "op", "delete", "err", err)
-		rt.Status, rt.Detail = "error", "delete failed"
-		writeRoundTrip(w, rt)
-		return
-	}
-	rt.Steps = append(rt.Steps, "DeleteObject")
-
-	rt.Status = "ok"
-	rt.Ms = time.Since(start).Milliseconds()
-	rt.Detail = fmt.Sprintf("wrote, read and deleted an object in %s", b["bucket"])
-	writeRoundTrip(w, rt)
 }
 
 // tableHandler round-trips an item through the bound table: write, read back,

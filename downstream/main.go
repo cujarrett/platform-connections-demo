@@ -130,6 +130,7 @@ func main() {
 	// difference between these two calls.
 	apiURL := upstream + "/api/v1/data"
 	entraURL := upstream + "/api/v1/protected"
+	entraAdminURL := upstream + "/api/v1/admin"
 
 	// Metrics live on their own port. Sharing the app port would force the platform to
 	// mark that port identity-free so Prometheus can scrape it, which would undo the
@@ -144,10 +145,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /api/call", callHandler(apiURL))
-	mux.HandleFunc("GET /api/entra", entraHandler(entraURL))
+	mux.HandleFunc("GET /api/entra", entraHandler("entra", entraURL))
+	mux.HandleFunc("GET /api/entra-admin", entraHandler("entra-admin", entraAdminURL))
 	mux.HandleFunc("GET /api/weather", proxyHandler("weather", weatherURL))
 	mux.HandleFunc("GET /api/leak", proxyHandler("leak", leakURL))
-	mux.HandleFunc("GET /api/storage", storageHandler)
 	mux.HandleFunc("GET /api/table", tableHandler)
 	mux.HandleFunc("/", notFoundHandler)
 

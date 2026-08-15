@@ -15,9 +15,13 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 
-// Must match a role name under entra.roles in this Api's workspace file. Declared
-// and granted there; only checked here.
-const requiredRole = "Data.Read"
+// Role names as declared under entra.roles in this Api's workspace file. Declared and
+// granted there; only checked here. Data.Admin is offered to nobody, so holding an
+// identity this API trusts is still not enough to pass it.
+const (
+	roleRead  = "Data.Read"
+	roleAdmin = "Data.Admin"
+)
 
 // Nil until discovery completes. Fetched in the background so an Entra blip cannot
 // stop this pod becoming ready and take the mesh half of the demo down with it.
@@ -70,8 +74,12 @@ func startEntraVerifier(ctx context.Context) {
 }
 
 // The Entra half. The mesh already allowed the connection; this asks the separate
-// question of whether that identity was granted the role.
-func protectedHandler(w http.ResponseWriter, r *http.Request) {
+// question of whether that identity was granted the role this route needs.
+func entraRoleHandler(requiredRole string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { checkRole(w, r, requiredRole) }
+}
+
+func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	verifier := entraVerifier.Load()
 	if verifier == nil {
 		// Not a refusal - nothing was checked. Saying "denied" would teach the wrong lesson.
@@ -98,7 +106,8 @@ func protectedHandler(w http.ResponseWriter, r *http.Request) {
 
 	var claims struct {
 		Roles []string `json:"roles"`
-		AppID string   `json:"appid"`
+		// azp, not appid - appid is a v1 claim, and these tokens are v2.
+		AppID string `json:"azp"`
 	}
 	if err := tok.Claims(&claims); err != nil {
 		entraDeny(w, http.StatusUnauthorized, "unreadable_claims", err.Error())

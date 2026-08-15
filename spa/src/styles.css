@@ -425,6 +425,11 @@ h2 {
   border-color: var(--color-text-muted);
   color: var(--color-text);
 }
+/* The Entra check happens in the app container, not the sidecar. Dashed, so a reader
+   can see at a glance that this row was decided somewhere the mesh had no part in. */
+.mesh.by-app {
+  border-top-style: dashed;
+}
 .mesh .mark {
   font-size: 0.85rem;
   line-height: 1;
