@@ -430,6 +430,13 @@ h2 {
 .mesh.by-app {
   border-top-style: dashed;
 }
+
+/* Entra cards get their own badge colour. Green, yellow and red are reserved for
+   health here, so the layer marker uses the blue/purple family instead. */
+.kind.entra {
+  border-color: color-mix(in srgb, var(--color-accent, #8b8bf5) 55%, var(--color-border));
+  color: color-mix(in srgb, var(--color-accent, #8b8bf5) 70%, var(--color-text));
+}
 .mesh .mark {
   font-size: 0.85rem;
   line-height: 1;

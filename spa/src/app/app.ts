@@ -112,7 +112,7 @@ interface Result {
       @for (c of cases; track c.title; let i = $index) {
         <section class="case" [class]="verdict(i)" [id]="'case-' + i">
           <div class="narrative">
-            <span class="kind">{{ c.kind }}</span>
+            <span class="kind" [class.entra]="c.kind.startsWith('entra')">{{ c.kind }}</span>
             <h2>{{ c.title }}</h2>
             <p class="summary">{{ c.summary }}</p>
           </div>

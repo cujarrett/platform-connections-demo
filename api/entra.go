@@ -100,37 +100,69 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	if err != nil {
 		// 401, not 403: the token itself did not hold up, so the caller has not been
 		// refused - it has not been believed.
-		entraDeny(w, http.StatusUnauthorized, "invalid_token", err.Error())
+		//
+		// The reason stays in the log. This response is public, and a library error
+		// string is not something to pipe there on trust - what it says today is
+		// audience and issuer detail, but that is the library's choice to change.
+		slog.Warn("entra token rejected", "err", err)
+		entraDeny(w, http.StatusUnauthorized, "invalid_token",
+			"signature, issuer, audience or expiry did not check out")
 		return
 	}
 
 	var claims struct {
 		Roles []string `json:"roles"`
 		// azp, not appid - appid is a v1 claim, and these tokens are v2.
-		AppID string `json:"azp"`
+		AppID string   `json:"azp"`
+		Aud   []string `json:"aud"`
+		Iss   string   `json:"iss"`
+		Exp   int64    `json:"exp"`
 	}
 	if err := tok.Claims(&claims); err != nil {
-		entraDeny(w, http.StatusUnauthorized, "unreadable_claims", err.Error())
+		slog.Warn("entra claims unreadable", "err", err)
+		entraDeny(w, http.StatusUnauthorized, "unreadable_claims", "could not read the token claims")
 		return
 	}
 
-	// The line the demo turns on. A caller with no grant still arrives with a real,
-	// valid token - it just carries no role for this API.
+	// What the demo shows instead of the token. These are identifiers, not secrets -
+	// no signature, no raw JWT, and never the SVID that bought it. The token itself is
+	// a bearer credential for about an hour and this walkthrough is public, so it does
+	// not leave this process.
+	presented := map[string]any{
+		"iss":        claims.Iss,
+		"aud":        claims.Aud,
+		"azp":        claims.AppID,
+		"roles":      claims.Roles,
+		"expires_in": fmt.Sprintf("%ds", max(0, claims.Exp-time.Now().Unix())),
+	}
+
+	// The line the demo turns on. A refused caller still arrives with a real, valid
+	// token - it just does not carry the role this route wants.
 	if !slices.Contains(claims.Roles, requiredRole) {
 		entraRefused.Add(1)
-		slog.Info("entra refused", "appid", claims.AppID, "roles", claims.Roles, "required", requiredRole)
-		entraDeny(w, http.StatusForbidden, "missing_role",
-			fmt.Sprintf("identity is valid but holds %v, needs %q", claims.Roles, requiredRole))
+		slog.Info("entra refused", "azp", claims.AppID, "roles", claims.Roles, "required", requiredRole)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
+			"error":     "missing_role",
+			"gate":      "entra",
+			"needs":     requiredRole,
+			"held":      claims.Roles,
+			"why":       "the token is valid and this role is not in it",
+			"presented": presented,
+		})
 		return
 	}
 
 	entraAllowed.Add(1)
-	slog.Info("entra allowed", "appid", claims.AppID, "roles", claims.Roles)
+	slog.Info("entra allowed", "azp", claims.AppID, "roles", claims.Roles)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
-		"data":  "ok",
-		"appid": claims.AppID,
-		"roles": claims.Roles,
+		"data":      "ok",
+		"needs":     requiredRole,
+		"held":      claims.Roles,
+		"why":       "the token carries the role this route requires",
+		"presented": presented,
 	})
 }
 

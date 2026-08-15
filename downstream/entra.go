@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +29,32 @@ var (
 // and there is no user.
 func entraScope() string {
 	return os.Getenv("ENTRA_SCOPE_UPSTREAM_API")
+}
+
+// svidSubject reads the sub claim out of this pod's own SVID, which is the identity
+// the federated credential is matched against. Only that one claim is returned - the
+// SVID is what proves this workload is itself, so it never leaves the process. No
+// verification here: it is our own token, read from our own file, and used for display.
+func svidSubject() string {
+	raw, err := os.ReadFile(os.Getenv("AZURE_FEDERATED_TOKEN_FILE"))
+	if err != nil {
+		return ""
+	}
+	parts := strings.Split(strings.TrimSpace(string(raw)), ".")
+	if len(parts) != 3 {
+		return ""
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+	}
+	var c struct {
+		Sub string `json:"sub"`
+	}
+	if err := json.Unmarshal(payload, &c); err != nil {
+		return ""
+	}
+	return c.Sub
 }
 
 // Trades this pod's SVID for an Entra access token. No secret involved - the SVID is
@@ -146,9 +173,27 @@ func entraHandler(name, target string) http.HandlerFunc {
 			return
 		}
 
+		// What this side of the exchange looked like. The SVID and the access token are
+		// both credentials, so neither appears here - only the identity that was proven
+		// and the API it was traded for, both of which are already public config.
+		var upstreamView map[string]any
+		json.Unmarshal(body, &upstreamView) //nolint:errcheck
+		out, err := json.Marshal(map[string]any{
+			"exchanged": map[string]string{
+				"proved":    svidSubject(),
+				"asked_for": entraScope(),
+				"as":        os.Getenv("AZURE_CLIENT_ID"),
+			},
+			"upstream_said": upstreamView,
+		})
+		if err != nil {
+			writeJSONError(w, "encode response failed", http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.WriteHeader(resp.StatusCode)
-		w.Write(body) //nolint:errcheck
+		w.Write(out) //nolint:errcheck
 	}
 }
