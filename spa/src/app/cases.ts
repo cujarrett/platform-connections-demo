@@ -482,7 +482,9 @@ spec:
       allowedCallers:
         - namespace: platform-connections-demo
           app: authorized-api`,
-        sources: [workspace("upstream-api.yaml", "the callee declares the role, and who holds it", 13, 18)],
+        sources: [
+          workspace("upstream-api.yaml", "the callee declares the role, and who holds it", 13, 18),
+        ],
         actor: "callee",
       },
     ],

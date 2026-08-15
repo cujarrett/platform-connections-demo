@@ -210,9 +210,9 @@ interface Result {
               <div class="why-slot">
                 @if (verdict(i) === "broken") {
                   <p class="why broken">
-                    <b>Demo not connected.</b> Expected HTTP {{ call.expect }}. Start
-                    it with <code>just dev</code> from <code>spa/</code>.
-                    <code>npm start</code> alone skips the port-forwards.
+                    <b>Demo not connected.</b> Expected HTTP {{ call.expect }}. Start it with
+                    <code>just dev</code> from <code>spa/</code>. <code>npm start</code> alone skips
+                    the port-forwards.
                   </p>
                 } @else if (results()[i].state === "done") {
                   <p class="why" [innerHTML]="html(call.why)"></p>
