@@ -37,7 +37,10 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
+	// Mesh-only. Whoever the mesh lets through is served.
 	mux.HandleFunc("GET /api/v1/data", dataHandler)
+	// Same connection rules as above, and then a role check.
+	mux.HandleFunc("GET /api/v1/protected", protectedHandler)
 	mux.HandleFunc("/", notFoundHandler)
 
 	srv := &http.Server{
@@ -53,6 +56,8 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+
+	startEntraVerifier(ctx)
 
 	go func() {
 		logger.Info("server listening", "port", port, "version", version)
@@ -115,6 +120,11 @@ func metricsHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "# HELP demo_api_data_requests_total Requests served on /api/v1/data.\n") //nolint:errcheck
 	fmt.Fprintf(w, "# TYPE demo_api_data_requests_total counter\n")                          //nolint:errcheck
 	fmt.Fprintf(w, "demo_api_data_requests_total %d\n", dataRequests.Load())                 //nolint:errcheck
+	// Split by outcome - summing them would hide the refused series.
+	fmt.Fprintf(w, "# HELP demo_api_entra_decisions_total Role checks on /api/v1/protected.\n")     //nolint:errcheck
+	fmt.Fprintf(w, "# TYPE demo_api_entra_decisions_total counter\n")                               //nolint:errcheck
+	fmt.Fprintf(w, "demo_api_entra_decisions_total{outcome=\"allowed\"} %d\n", entraAllowed.Load()) //nolint:errcheck
+	fmt.Fprintf(w, "demo_api_entra_decisions_total{outcome=\"refused\"} %d\n", entraRefused.Load()) //nolint:errcheck
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {

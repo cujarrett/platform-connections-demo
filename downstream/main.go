@@ -120,10 +120,16 @@ func main() {
 
 	// Platform convention: reach another app at <app>.<namespace>.svc.cluster.local.
 	// Nothing injects this - the name is deterministic, so there is no URL to declare.
-	apiURL := os.Getenv("API_URL")
-	if apiURL == "" {
-		apiURL = "http://upstream-api.platform-connections-demo.svc.cluster.local/api/v1/data"
+	upstream := os.Getenv("UPSTREAM_URL")
+	if upstream == "" {
+		upstream = "http://upstream-api.platform-connections-demo.svc.cluster.local"
 	}
+
+	// One host, two routes. Built from the same base so they cannot drift onto
+	// different hosts - the demo only means anything if the Entra check is the single
+	// difference between these two calls.
+	apiURL := upstream + "/api/v1/data"
+	entraURL := upstream + "/api/v1/protected"
 
 	// Metrics live on their own port. Sharing the app port would force the platform to
 	// mark that port identity-free so Prometheus can scrape it, which would undo the
@@ -138,6 +144,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /api/call", callHandler(apiURL))
+	mux.HandleFunc("GET /api/entra", entraHandler(entraURL))
 	mux.HandleFunc("GET /api/weather", proxyHandler("weather", weatherURL))
 	mux.HandleFunc("GET /api/leak", proxyHandler("leak", leakURL))
 	mux.HandleFunc("GET /api/storage", storageHandler)
