@@ -29,10 +29,11 @@ var (
 	entraRefused atomic.Int64
 )
 
-// This API's own name, injected by the platform. Callers ask for it by App ID URI
-// because that is derivable without looking up a client id.
+// This API's own client id, injected by the platform. A v2 access token carries the
+// resource's client id in aud, whatever identifier the caller asked by - so a caller
+// naming this API by App ID URI still produces a token audienced to this id.
 func expectedAudience() string {
-	return os.Getenv("ENTRA_AUDIENCE")
+	return os.Getenv("AZURE_CLIENT_ID")
 }
 
 // Resolves the verifier in the background, retrying forever. Reads no secret,
