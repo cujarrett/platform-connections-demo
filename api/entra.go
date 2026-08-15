@@ -110,13 +110,13 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 		return
 	}
 
+	// Only the claims go-oidc does not already expose. aud, iss and exp are read off
+	// the token below instead - aud in particular is a string in some tokens and an
+	// array in others, and the library has already normalised that.
 	var claims struct {
 		Roles []string `json:"roles"`
 		// azp, not appid - appid is a v1 claim, and these tokens are v2.
-		AppID string   `json:"azp"`
-		Aud   []string `json:"aud"`
-		Iss   string   `json:"iss"`
-		Exp   int64    `json:"exp"`
+		AppID string `json:"azp"`
 	}
 	if err := tok.Claims(&claims); err != nil {
 		slog.Warn("entra claims unreadable", "err", err)
@@ -129,11 +129,11 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	// a bearer credential for about an hour and this walkthrough is public, so it does
 	// not leave this process.
 	presented := map[string]any{
-		"iss":        claims.Iss,
-		"aud":        claims.Aud,
+		"iss":        tok.Issuer,
+		"aud":        tok.Audience,
 		"azp":        claims.AppID,
 		"roles":      claims.Roles,
-		"expires_in": fmt.Sprintf("%ds", max(0, claims.Exp-time.Now().Unix())),
+		"expires_in": fmt.Sprintf("%ds", max(0, int64(time.Until(tok.Expiry).Seconds()))),
 	}
 
 	// The line the demo turns on. A refused caller still arrives with a real, valid
