@@ -635,19 +635,18 @@ spec:
     title: "Platform Connections stops at workload authorization",
     summary:
       "Every call above was decided by which workload was calling, and what that workload had been granted. Never by who was using it.",
-    deep: `<p class="answers"><b>It answers</b></p>
+    deep: `<p class="answers"><b>It authorizes workloads</b></p>
 <ul>
   <li>Can this pod call that pod?</li>
   <li>Can this pod reach this database?</li>
-  <li>Was this identity granted this role?</li>
+  <li>Was this workload granted this role?</li>
 </ul>
-<p class="answers"><b>It does not answer</b></p>
+<p class="answers"><b>It does not authorize people</b></p>
 <ul class="not">
   <li>Can Alice view Order 123?</li>
   <li>Can Bob approve payroll?</li>
 </ul>
-<p>Those last two are about a person and a particular record.</p>
-<p>The last two calls sharpen that boundary rather than move it: same pod, same certificate, one refused - by a role granted outside this cluster. Still a workload being authorized, one layer up, and still nobody's name anywhere.</p>
+<p>Both lists are authorization. The difference is <i>who</i> is being authorized. <code>Data.Read</code> was granted to an application, not to a person, and upstream-api cannot tell whether a human was anywhere near the call.</p>
 <hr class="close-rule" />
 <p><b>A mesh can already watch every call. So why declare?</b> Watching only shows what happened while something was looking, so the quarter-end job and the failover path are missing from that graph and live in production. Declaring costs a line in review. <i>Can we turn this off?</i> becomes a list of who declared it, not thirty days of silence, and an undeclared call is refused as it happens, not drawn on a dashboard for Monday.</p>`,
     docs: [DESIGN_DOC, NOTHING_NOVEL, CROSSPLANE_ADOPTERS, ISTIO_CASE_STUDIES],
