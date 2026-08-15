@@ -198,6 +198,34 @@ h1 {
 /* One rail, drawn once, on the band itself. The heading, the card and the detail panel
    all hang off the same line, so they read as one thing. Drawn per-child it came out as
    two disconnected dashes at the same x, which looks like a mistake rather than a link. */
+/* One band per enforcement layer. The two runs look alike on purpose - same shape,
+   same declarations - so the page has to say out loud where one stops. */
+.layer {
+  border-top: 2px solid var(--color-text-muted);
+  padding: 1.5rem 0 0.25rem;
+  margin-top: 1.5rem;
+}
+.layer h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0 0 0.35rem;
+}
+.layer p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.layer.entra {
+  border-top-color: color-mix(in srgb, var(--color-accent, #8b8bf5) 70%, var(--color-border));
+}
+.layer.entra h2 {
+  color: color-mix(in srgb, var(--color-accent, #8b8bf5) 75%, var(--color-text));
+}
+
 .case {
   padding: 2.75rem 0;
   scroll-margin-top: 1.5rem;

@@ -21,6 +21,9 @@ export interface Snippet {
 }
 
 export interface Case {
+  /** Shown as a band above this card, once per group. The mesh and Entra runs are the
+   *  same shape and different systems, and a per-card badge was not enough to say so. */
+  section?: { label: string; blurb: string }
   kind: string
   title: string
   summary: string
@@ -105,6 +108,11 @@ const ISTIO_CASE_STUDIES: Source = {
 
 export const CASES: Case[] = [
   {
+    section: {
+      label: "Service mesh",
+      blurb:
+        "Enforced by a proxy beside every pod, against certificates this cluster issues. Decides whether a call is carried at all.",
+    },
     kind: "service mesh · on-platform → on-platform",
     title: "Declared, so it works",
     summary:
@@ -119,8 +127,8 @@ export const CASES: Case[] = [
       request: "GET upstream-api/api/v1/data",
       why: "<b>Allowed.</b> The caller's identity is named in the policy, so it passes.",
     },
-    deep: `<p>This call needed two yeses: one from the caller's pod to let it out, one from the callee's pod to let it in. Sharing a namespace is neither.</p>
-<p><b>Neither team wrote a service mesh policy.</b> One declared the calls it makes, the other declared who may call it. Neither has to know a service mesh exists, and that is the point. Platform engineering is the difference between understanding a mesh and shipping without needing to.</p>`,
+    deep: `<p>Two yeses, one from each pod. Sharing a namespace is neither.</p>
+<p><b>Neither team wrote a service mesh policy.</b> One declared what it calls, the other who may call it. Platform engineering is the difference between understanding a mesh and shipping without needing to.</p>`,
     declared: [
       {
         code: `consumes:
@@ -154,8 +162,10 @@ spec:
   egress:
     - hosts:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
-        # ↓ the one app it declared. no wildcard, so nothing else
-        - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"`,
+        # ↓ the app it declared. every other line here was declared too,
+        #   and the cards below account for them. no wildcard anywhere
+        - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"
+        # ...one entry per declared destination`,
         sources: [composition("the Sidecar egress list", 1011, 1054)],
         actor: "caller",
       },
@@ -170,6 +180,10 @@ spec:
     matchLabels: { app.kubernetes.io/instance: upstream-api }
   action: ALLOW
   rules:
+    # metrics, on its own port. no principal, because the scraper has none
+    - to:
+        - operation:
+            ports: ["9090"]
     # provides: data
     - from:
         - source:
@@ -186,7 +200,7 @@ spec:
     kind: "service mesh · on-platform → on-platform",
     title: "Not declared, so it is refused",
     summary:
-      "Same callee, same image, and it declared the same way out. It is missing from the callee's guest list, so it is turned away before the app ever sees it.",
+      "Same image, same declared way out. It is missing from the guest list, so it is turned away before the app ever sees it.",
     call: {
       from: "unauthorized-api",
       to: "upstream-api",
@@ -197,8 +211,8 @@ spec:
       request: "GET upstream-api/api/v1/data",
       why: "<b>Denied.</b> Nothing was wrong with the caller. It simply was not on the list.",
     },
-    deep: `<p>upstream-api names one caller in its policy: authorized-api. unauthorized-api is not on the list so it is refused. The two callers are otherwise identical - same image, same declared way out. Only the guest list differs.</p>
-<p><b>Could a pod claim to be someone else?</b> No. Identity is not a name in a header. Every meshed pod carries a certificate proving its SPIFFE identity, and STRICT mTLS refuses any peer that cannot present one. The name is checked only after the certificate proves it.</p>`,
+    deep: `<p>upstream-api names one caller: authorized-api. Only the guest list differs.</p>
+<p><b>Could a pod claim to be someone else?</b> No - identity is a certificate, not a header. STRICT mTLS refuses any peer without one, and the name is checked only after the certificate proves it.</p>`,
     declared: [
       {
         code: `consumes:
@@ -232,7 +246,12 @@ spec:
   selector:
     matchLabels: { app.kubernetes.io/instance: upstream-api }
   mtls:
-    mode: STRICT`,
+    mode: STRICT
+  portLevelMtls:
+    # the one hole, and it is deliberate: Prometheus is not in the mesh
+    # and has no certificate to present. App traffic is unaffected.
+    "9090":
+      mode: PERMISSIVE`,
         sources: [composition("the PeerAuthentication template", 937, 960)],
         actor: "callee",
       },
@@ -247,12 +266,16 @@ spec:
     matchLabels: { app.kubernetes.io/instance: upstream-api }
   action: ALLOW
   rules:
+    # rules are ORed, so this one is a second way in - metrics only
+    - to:
+        - operation:
+            ports: ["9090"]
     # provides: data
     - from:
         - source:
             principals:
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-# unauthorized-api appears in no rule, so it is refused`,
+# unauthorized-api appears in no rule that carries the app port, so it is refused`,
         sources: [composition("the AuthorizationPolicy template", 961, 1010)],
         actor: "callee",
       },
@@ -273,7 +296,7 @@ spec:
       request: "GET https://api.open-meteo.com/v1/forecast",
       why: "<b>Allowed.</b> Declaring the host is what makes it reachable.",
     },
-    deep: `<p>One declared hostname renders both halves: a <code>ServiceEntry</code> to make the address known, and a <code>Sidecar</code> egress line to let this pod reach it. Known is not permitted.</p>`,
+    deep: `<p>One declared hostname renders both: a <code>ServiceEntry</code> making the address known, a <code>Sidecar</code> line letting this pod reach it. Known is not permitted.</p>`,
     upstream:
       "Nothing. The site checks no identity, so the mesh alone controls which workload may reach it.",
     declared: [
@@ -337,8 +360,8 @@ spec:
       codeNote: "its own sidecar answered, example.com was never contacted",
       why: "<b>Blocked on the way out.</b> The packet never reaches the internet.",
     },
-    deep: `<p>There is no pod on the far end to hold a policy, so the only place to decide is the caller's own side, on the way out.</p>
-<p>Its <code>Sidecar</code> runs <code>REGISTRY_ONLY</code>: the control plane, its own namespace, and the hosts it declared. Nothing else exists as far as it is concerned. No team asked for that default, and none can forget it.</p>`,
+    deep: `<p>No pod on the far end to hold a policy, so the only place to decide is on the way out.</p>
+<p>Its <code>Sidecar</code> runs <code>REGISTRY_ONLY</code> - the control plane, its namespace, and what it declared. Nothing else exists. No team asked for that default, and none can forget it.</p>`,
     upstream:
       "Nothing. It is a website on the internet, outside the mesh, and it never learns the call was attempted.",
     declared: [
@@ -393,9 +416,9 @@ spec:
       request: "PutItem → GetItem → DeleteItem",
       why: "<b>Allowed.</b> The table reference is what opened the path to it.",
     },
-    deep: `<p>Off-platform hosts normally go in <code>consumes</code>. This one does not. Asking for a table already identifies the endpoint, so the platform registers it.</p>
-<p><b>There is a hidden call first.</b> Before touching the table, a sidecar trades this pod's certificate for temporary cloud credentials. Two more endpoints the app never declared, and unregistered means blackholed, so the platform registers those too. Miss them and the pod starts fine, then fails every call with nothing pointing at the mesh.</p>
-<p>A bucket, a cache, a queue - every resource the platform hands out has an address it already knows, and the same thing happens. The rule that falls out: <b><code>consumes</code> is for what nothing else states.</b> An off-platform host nobody can infer, or an app in another namespace. Anything the platform provisioned, it registers.</p>`,
+    deep: `<p>Off-platform hosts normally go in <code>consumes</code>. Not this one: asking for a table identifies the endpoint, so the platform registers it.</p>
+<p><b>There is a hidden call first.</b> A sidecar trades this pod's certificate for temporary credentials - two more endpoints nobody declared, and unregistered means blackholed. Miss them and the pod starts fine, then fails every call.</p>
+<p>A bucket, a cache, a queue - same thing. <b><code>consumes</code> is for what nothing else states.</b></p>`,
     upstream: "Nothing. The database is outside the mesh too.",
     declared: [
       {
@@ -448,6 +471,11 @@ spec:
     ],
   },
   {
+    section: {
+      label: "Entra",
+      blurb:
+        "Enforced by application code, against an identity provider outside the cluster. Runs only after every mesh gate has already said yes.",
+    },
     kind: "entra · on-platform → on-platform",
     title: "A second gate, answering to someone else",
     summary:
@@ -463,9 +491,10 @@ spec:
       request: "GET upstream-api/api/v1/protected",
       why: "<b>Allowed.</b> Every mesh gate passed, and the token carried Data.Read.",
     },
-    deep: `<p>Nothing here replaces the mesh. The call still passes all four checkpoints first; only then is a token read. This gate can refuse a call the mesh allowed, and it can never permit one the mesh refused.</p>
-<p><b>No secret is involved.</b> The pod already holds a certificate proving which workload it is. It presents that to Entra, which trusts it because the callee's registration was told to, and gets back a token naming the roles it holds. Nothing is stored, and there is no password to rotate.</p>
-<p><b>Why bother, when the mesh already said yes?</b> The mesh answers "may this workload open a connection". This answers "may this identity do this particular thing", and it answers it somewhere outside the cluster - so the grant survives the cluster and holds anywhere that identity is used.</p>`,
+    deep: `<p>Nothing replaces the mesh. All four checkpoints pass first, then a token is read. This gate can refuse what the mesh allowed, never permit what it refused.</p>
+<p><b>Two tokens, neither a password.</b> The pod's <b>SVID</b> says who it is - <code>sub</code> its SPIFFE ID, <code>aud</code> <code>api://AzureADTokenExchange</code>. Entra accepts it because a <b>federated credential</b> names those exact strings, matched literally. Back comes an <b>access token</b>: <code>azp</code> the caller, <code>aud</code> this API, <code>roles</code> what it holds. Only <code>roles</code> decides.</p>
+<p>The scope <code>&lt;this API&gt;/.default</code> means "every role I already hold". It cannot name one it was not granted - that needs a user to consent, and there is none.</p>
+<p>The panel shows what the caller proved and what the callee received. The tokens never appear - each is a live credential, and this page is public.</p>`,
     declared: [
       {
         code: `entra:
@@ -489,6 +518,20 @@ spec:
       },
     ],
     rendered: [
+      {
+        code: `# why Entra believes the pod at all.
+# all three are matched literally - no wildcards, no prefixes
+apiVersion: applications.azuread.upbound.io/v1beta1
+kind: FederatedIdentityCredential
+spec:
+  forProvider:
+    issuer: https://oidc.mattjarrett.dev
+    subject: spiffe://homelab.local/ns/platform-connections-demo/sa/authorized-api
+    audiences:
+      - api://AzureADTokenExchange`,
+        sources: [composition("the FederatedIdentityCredential template", 715, 745)],
+        actor: "callee",
+      },
       {
         code: `# the role this API offers
 apiVersion: applications.azuread.upbound.io/v1beta1
@@ -537,9 +580,9 @@ spec:
       request: "GET upstream-api/api/v1/admin",
       why: "<b>Denied.</b> Allowed in, and still not allowed to do this.",
     },
-    deep: `<p>Nothing changed about the caller between these two cards. It passed every mesh gate here exactly as it did there, and its token is the same real, signed, unexpired token. That token names one role, and this route wants a different one: <code>identity is valid but holds ["Data.Read"], needs "Data.Admin"</code>.</p>
-<p><b>Being let in is not being allowed to do everything.</b> The mesh answers once, at the door, for the whole workload. This answers per route, so one caller can read and not administer. Splitting that would take a second app and a second guest list at the mesh layer.</p>
-<p><b>Two 403s that look identical and are not.</b> The refusal two cards up came from a proxy reading a certificate. This one came from application code reading a claim. They live in different files, in different systems, and are fixed by different people - so the response says which gate answered.</p>`,
+    deep: `<p>Nothing changed about the caller - same certificate, same gates, same token, <code>roles</code> still holding <code>Data.Read</code>. This route wants a role that is not in the list, and no signed token can be talked into containing it.</p>
+<p><b>Being let in is not being allowed to do everything.</b> The mesh answers once, at the door, for the whole workload. This answers per route.</p>
+<p><b>Two 403s that look identical and are not.</b> The earlier came from a proxy reading a certificate, this from app code reading a claim - so the response says which gate answered.</p>`,
     declared: [
       {
         code: `entra:
@@ -590,12 +633,13 @@ spec:
   {
     kind: "where this stops",
     title: "Platform Connections stops at workload authorization",
-    summary: "Every call above was decided by which pod was calling. Never by who was using it.",
+    summary:
+      "Every call above was decided by which workload was calling, and what that workload had been granted. Never by who was using it.",
     deep: `<p class="answers"><b>It answers</b></p>
 <ul>
   <li>Can this pod call that pod?</li>
   <li>Can this pod reach this database?</li>
-  <li>Can this pod use this bucket?</li>
+  <li>Was this identity granted this role?</li>
 </ul>
 <p class="answers"><b>It does not answer</b></p>
 <ul class="not">
@@ -603,6 +647,7 @@ spec:
   <li>Can Bob approve payroll?</li>
 </ul>
 <p>Those last two are about a person and a particular record.</p>
+<p>The last two calls sharpen that boundary rather than move it: same pod, same certificate, one refused - by a role granted outside this cluster. Still a workload being authorized, one layer up, and still nobody's name anywhere.</p>
 <hr class="close-rule" />
 <p><b>A mesh can already watch every call. So why declare?</b> Watching only shows what happened while something was looking, so the quarter-end job and the failover path are missing from that graph and live in production. Declaring costs a line in review. <i>Can we turn this off?</i> becomes a list of who declared it, not thirty days of silence, and an undeclared call is refused as it happens, not drawn on a dashboard for Monday.</p>`,
     docs: [DESIGN_DOC, NOTHING_NOVEL, CROSSPLANE_ADOPTERS, ISTIO_CASE_STUDIES],

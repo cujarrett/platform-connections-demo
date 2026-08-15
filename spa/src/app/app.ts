@@ -110,6 +110,12 @@ interface Result {
       </header>
 
       @for (c of cases; track c.title; let i = $index) {
+        @if (c.section) {
+          <div class="layer" [class.entra]="c.section.label === 'Entra'">
+            <h2>{{ c.section.label }}</h2>
+            <p>{{ c.section.blurb }}</p>
+          </div>
+        }
         <section class="case" [class]="verdict(i)" [id]="'case-' + i">
           <div class="narrative">
             <span class="kind" [class.entra]="c.kind.startsWith('entra')">{{ c.kind }}</span>
