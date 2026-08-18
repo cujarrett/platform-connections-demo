@@ -1250,6 +1250,12 @@ button:disabled {
 .token-v.short {
   color: var(--color-text-muted);
 }
+/* The one substring shared by "acting as" and "azp" - same colour on both sides so
+   the match is visible without reading the surrounding label. */
+.token-id.linked {
+  color: var(--color-accent);
+  font-weight: 600;
+}
 .token-verdict {
   font-size: 0.7rem;
   color: color-mix(in srgb, var(--color-error) 70%, var(--color-text));

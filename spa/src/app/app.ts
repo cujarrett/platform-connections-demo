@@ -230,7 +230,16 @@ interface Result {
                     @for (r of tokenRows(i, "proved"); track r.k) {
                       <div class="token-row">
                         <span class="token-k">{{ r.k }}</span>
-                        <span class="token-v">{{ r.v }}</span>
+                        @if (r.k === "acting as" && linkedIds(i)) {
+                          <span class="token-v"
+                            >{{ labelPart(r.v)
+                            }}<span class="token-id linked" title="matches azp on the callee's side">{{
+                              idPart(r.v)
+                            }}</span></span
+                          >
+                        } @else {
+                          <span class="token-v">{{ r.v }}</span>
+                        }
                       </div>
                     }
                   </div>
@@ -240,12 +249,21 @@ interface Result {
                     @for (r of tokenRows(i, "received"); track r.k) {
                       <div class="token-row">
                         <span class="token-k">{{ r.k }}</span>
-                        <span
-                          class="token-v"
-                          [class.decides]="r.k === 'roles'"
-                          [class.short]="r.k === 'expires in'"
-                          >{{ r.v }}</span
-                        >
+                        @if (r.k === "azp" && linkedIds(i)) {
+                          <span class="token-v"
+                            >{{ labelPart(r.v)
+                            }}<span class="token-id linked" title="matches acting-as on the caller's side">{{
+                              idPart(r.v)
+                            }}</span></span
+                          >
+                        } @else {
+                          <span
+                            class="token-v"
+                            [class.decides]="r.k === 'roles'"
+                            [class.short]="r.k === 'expires in'"
+                            >{{ r.v }}</span
+                          >
+                        }
                       </div>
                     }
                     @if (verdict(i) === "deny" && roleWanted(i)) {
@@ -489,6 +507,30 @@ export class App {
       { k: "roles", v: one(p["roles"]) },
       { k: "expires in", v: one(p["expires_in"]) },
     ].filter((r) => r.v)
+  }
+
+  /** Splits "label · guid" into its two halves - the id is what a reader matches by eye. */
+  private splitIdField(v: string): { label: string; id: string } {
+    const idx = v.lastIndexOf(" · ")
+    return idx === -1 ? { label: v, id: "" } : { label: v.slice(0, idx + 3), id: v.slice(idx + 3) }
+  }
+
+  labelPart(v: string): string {
+    return this.splitIdField(v).label
+  }
+
+  idPart(v: string): string {
+    return this.splitIdField(v).id
+  }
+
+  /** True when the caller's own client id and the callee's azp claim are the same GUID. */
+  linkedIds(i: number): boolean {
+    const proved = this.tokenRows(i, "proved").find((r) => r.k === "acting as")
+    const received = this.tokenRows(i, "received").find((r) => r.k === "azp")
+    if (!proved || !received) return false
+    const a = this.splitIdField(proved.v).id
+    const b = this.splitIdField(received.v).id
+    return a !== "" && a === b
   }
 
   /** The role this route wanted, when the callee refused for want of it. */
