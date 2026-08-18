@@ -128,12 +128,15 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	// no signature, no raw JWT, and never the SVID that bought it. The token itself is
 	// a bearer credential for about an hour and this walkthrough is public, so it does
 	// not leave this process.
-	presented := map[string]any{
-		"iss":        tok.Issuer,
-		"aud":        tok.Audience,
-		"azp":        claims.AppID,
-		"roles":      claims.Roles,
-		"expires_in": fmt.Sprintf("%ds", max(0, int64(time.Until(tok.Expiry).Seconds()))),
+	// Field order is the reading order, and a bare GUID teaches nothing - each one is
+	// labelled with what it identifies. Structs, not maps: Go sorts map keys, which
+	// would put the GUIDs first and the decision last.
+	presented := tokenView{
+		Roles:     claims.Roles,
+		Azp:       claims.AppID + " · the caller",
+		Aud:       strings.Join(tok.Audience, ", ") + " · this API",
+		Iss:       tok.Issuer,
+		ExpiresIn: fmt.Sprintf("%ds", max(0, int64(time.Until(tok.Expiry).Seconds()))),
 	}
 
 	// The line the demo turns on. A refused caller still arrives with a real, valid
@@ -143,13 +146,13 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 		slog.Info("entra refused", "azp", claims.AppID, "roles", claims.Roles, "required", requiredRole)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
-			"error":     "missing_role",
-			"gate":      "entra",
-			"needs":     requiredRole,
-			"held":      claims.Roles,
-			"why":       "the token is valid and this role is not in it",
-			"presented": presented,
+		json.NewEncoder(w).Encode(decision{ //nolint:errcheck
+			Why:       "the token is valid and this role is not in it",
+			Needs:     requiredRole,
+			Held:      claims.Roles,
+			Error:     "missing_role",
+			Gate:      "entra",
+			Presented: presented,
 		})
 		return
 	}
@@ -157,13 +160,32 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	entraAllowed.Add(1)
 	slog.Info("entra allowed", "azp", claims.AppID, "roles", claims.Roles)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
-		"data":      "ok",
-		"needs":     requiredRole,
-		"held":      claims.Roles,
-		"why":       "the token carries the role this route requires",
-		"presented": presented,
+	json.NewEncoder(w).Encode(decision{ //nolint:errcheck
+		Why:       "the token carries the role this route requires",
+		Needs:     requiredRole,
+		Held:      claims.Roles,
+		Presented: presented,
 	})
+}
+
+// What the callee received, in reading order. Nothing here is a credential: the
+// signature and the token itself never leave this process.
+type tokenView struct {
+	Roles     []string `json:"roles"`
+	Azp       string   `json:"azp"`
+	Aud       string   `json:"aud"`
+	Iss       string   `json:"iss"`
+	ExpiresIn string   `json:"expires_in"`
+}
+
+// The verdict first, then what it was reached from.
+type decision struct {
+	Why       string    `json:"why"`
+	Needs     string    `json:"needs"`
+	Held      []string  `json:"held"`
+	Error     string    `json:"error,omitempty"`
+	Gate      string    `json:"gate,omitempty"`
+	Presented tokenView `json:"presented"`
 }
 
 // Always names which check failed - a mesh 403 and a role 403 look identical from

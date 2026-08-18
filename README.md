@@ -1,6 +1,6 @@
 # platform-connections-demo
 
-Demo apps behind [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo.
+Demo apps behind [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo.
 
 Three apps in one namespace. Two of them run a byte-identical image and differ only in what they declare - which is the whole point.
 
@@ -8,7 +8,7 @@ Three apps in one namespace. Two of them run a byte-identical image and differ o
 |---|---|
 | [`api/`](api/) | The API being called, deployed as `upstream-api`. Grants one caller and no one else. |
 | [`downstream/`](downstream/) | The caller. Deployed twice, as `authorized-api` and `unauthorized-api`, under different service accounts. |
-| [`spa/`](spa/) | The walkthrough. Four live calls showing what gets through and what does not. |
+| [`spa/`](spa/) | The walkthrough. Seven live calls showing what gets through and what does not. |
 
 ## Run it
 

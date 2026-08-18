@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # downstream
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-engineering-connections.md) in the homelab repo - proves both internal (mTLS) and external (`ServiceEntry`) connection registration. Identity-agnostic: deployed twice under different service accounts (`authorized-api`, `unauthorized-api`) to prove enforcement is identity-based, not code-based.
+Go HTTP API. Single binary, no frameworks. The caller in the homelab platform-connections demo. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo - exercises internal (mTLS), external (`ServiceEntry`), Entra and bound-resource paths. Identity-agnostic: one image deployed twice, as `authorized-api` and `unauthorized-api`, so the only difference is what each instance declares.
 
 ## Commands
 | Command | What it does |
@@ -35,9 +35,12 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 | Method | Path | Description |
 |---|---|---|
 | GET | `/healthz` | Liveness probe |
-| GET | `/api/call` | Calls `api` internally |
+| GET | `/api/call` | Calls `upstream-api` internally |
+| GET | `/api/entra` | Trades this pod's SVID for an Entra token, then calls `/api/v1/protected` |
+| GET | `/api/entra-admin` | The same token against `/api/v1/admin` - the role is held by nobody, so 403 |
 | GET | `/api/weather` | Calls a registered external FQDN (`api.open-meteo.com`) |
-| GET | `/api/leak` | Calls an unregistered external FQDN (`example.com`) - must fail once `REGISTRY_ONLY` is enforced |
+| GET | `/api/leak` | Calls an unregistered external FQDN (`example.com`) - blackholed by `REGISTRY_ONLY`, so 502 |
+| GET | `/api/table` | Round-trips one item through the bound DynamoDB table |
 | GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) - the platform scrapes every Api, so this route is required |
 
 ## Conventions
@@ -46,3 +49,5 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON
 - Binary name matches repo name
+- Every `AZURE_*`, `ENTRA_SCOPE_*` and AWS variable is injected by the platform from what the `Api` declared. None is a secret, and none is written by hand
+- Credentials never reach a response body. The Entra routes return only the identity proved and the API asked for

@@ -23,7 +23,6 @@
   --actor-callee: #03a9f4;
   --actor-metro: #ff6d00;
   --actor-example: #795548;
-  --actor-s3: #7c4dff;
   --actor-dynamo: #ff4081;
 
   --radius-sm: 6px;
@@ -241,6 +240,33 @@ h1 {
   align-items: start;
   transition: border-color 0.6s ease;
 }
+/* A card carrying a diagram instead of a call. The topology is the widest thing on
+   the page and the two-column rhythm starves it, so this one stacks: heading first,
+   then the diagram across the full width. */
+.case.wide {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  /* The rail is a verdict indicator and this card has no call to pass or fail. It also
+     costs 2px of alignment: the negative margin cancels the padding but not the
+     border, so content lands 2px inside the column. Invisible on a narrow card,
+     visible here where the panel runs the column's full width. */
+  border-left: 0;
+  padding-left: 0;
+  margin-left: 0;
+}
+/* No width cap on the panel - the page container is already 72rem, so the column is
+   about 1088px and the topology lands near the 1000px it was authored at. Capping it
+   again only left dead space to the right of a panel that should match every other. */
+.case.wide .narrative {
+  max-width: 72ch;
+}
+/* The diagram takes the card's full width. Everything else under it is prose, and
+   prose at that width is unreadable - :not(.diagram) is the whole point here. */
+.case.wide .deep > div:not(.diagram),
+.case.wide .deep .srcs {
+  max-width: 82ch;
+}
+
 .case.allow {
   border-left-color: var(--color-success);
 }
@@ -407,9 +433,6 @@ h2 {
 }
 .pod-example {
   --actor: var(--actor-example);
-}
-.pod-s3 {
-  --actor: var(--actor-s3);
 }
 .pod-dynamo {
   --actor: var(--actor-dynamo);
@@ -907,6 +930,44 @@ button:disabled {
 }
 /* Marks where scope ends and the closing argument begins - five ideas in one card
    otherwise read as one undifferentiated block. */
+.diagram {
+  /* Fixed geometry - below its natural width the labels collide rather than reflow. */
+  overflow-x: auto;
+  margin: 0 0 1.75rem;
+}
+.diagram svg {
+  display: block;
+  width: 100%;
+  min-width: 620px;
+  height: auto;
+  color: var(--color-text-muted);
+}
+.diagram .d-t {
+  fill: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+.diagram .d-s,
+.diagram .d-id,
+.diagram .d-d {
+  font-family: var(--font-mono);
+  text-anchor: middle;
+}
+.diagram .d-s {
+  fill: var(--color-text-muted);
+  font-size: 10.5px;
+}
+.diagram .d-id {
+  fill: var(--color-accent-text);
+  font-size: 12px;
+}
+.diagram .d-d {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
 .close-rule {
   border: none;
   border-top: 1px solid var(--color-border);
@@ -1126,5 +1187,77 @@ button:disabled {
   .body-source {
     flex-basis: 100%;
     white-space: normal;
+  }
+}
+
+/* ── Token panel ─────────────────────────────────────────
+   Entra cards only. Two columns, same caller-left callee-right mapping as
+   everything else: what was proved on the way out, what arrived on the way in. */
+.tokens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-border);
+}
+.token-h {
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.token-sub {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.45rem;
+}
+.token-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.12rem 0;
+}
+.token-k {
+  flex: 0 0 6.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+}
+/* One line, scrolled - not wrapped. A GUID broken across three lines is unreadable,
+   and these values are identifiers to recognise rather than prose to read. */
+.token-v {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--color-text);
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.token-v::-webkit-scrollbar {
+  display: none;
+}
+/* roles is the only claim the callee's decision turns on. */
+.token-v.decides {
+  color: var(--color-text);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+}
+.token-v.short {
+  color: var(--color-text-muted);
+}
+.token-verdict {
+  font-size: 0.7rem;
+  color: color-mix(in srgb, var(--color-error) 70%, var(--color-text));
+  margin-top: 0.5rem;
+}
+@media (max-width: 900px) {
+  .tokens {
+    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 }

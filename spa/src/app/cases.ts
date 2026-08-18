@@ -52,6 +52,8 @@ export interface Case {
   declared?: Snippet[]
   /** What the platform renders from it, one block per object. */
   rendered?: Snippet[]
+  /** Inline SVG, drawn rather than described. Static markup, never response data. */
+  diagram?: string
   /** Standalone reading, for a card with no snippet to sit under. */
   docs?: Source[]
 }
@@ -357,7 +359,7 @@ spec:
       enforcedAt: "downstream",
       expect: 502,
       request: "GET https://example.com",
-      codeNote: "its own sidecar answered, example.com was never contacted",
+      codeNote: "its own sidecar refused the connection, example.com was never contacted",
       why: "<b>Blocked on the way out.</b> The packet never reaches the internet.",
     },
     deep: `<p>No pod on the far end to hold a policy, so the only place to decide is on the way out.</p>
@@ -408,7 +410,7 @@ spec:
       "The app writes an item to a cloud database, reads it back, then deletes it. It never declared the address. Asking for the table was the declaration.",
     call: {
       from: "authorized-api",
-      to: "dynamodb.amazonaws.com",
+      to: "dynamodb.us-east-1.amazonaws.com",
       gate: "may I leave?",
       url: "/authorized/api/table",
       enforcedAt: "downstream",
@@ -417,7 +419,8 @@ spec:
       why: "<b>Allowed.</b> The table reference is what opened the path to it.",
     },
     deep: `<p>Off-platform hosts normally go in <code>consumes</code>. Not this one: asking for a table identifies the endpoint, so the platform registers it.</p>
-<p><b>There is a hidden call first.</b> A sidecar trades this pod's certificate for temporary credentials - two more endpoints nobody declared, and unregistered means blackholed. Miss them and the pod starts fine, then fails every call.</p>
+<p><b>There is a hidden call first.</b> Before any table call, a sidecar trades this pod's identity for temporary AWS keys at <code>sts.us-east-1.amazonaws.com</code> - an endpoint nobody declared, and unregistered means blackholed. Miss it and the pod starts fine, then fails every call.</p>
+<p>That trade is not the mesh certificate. The certificate is X.509 and never leaves the proxy; what goes to AWS is a <b>JWT-SVID</b> for the same identity, and the role's trust policy pins its <code>sub</code> to this exact service account. Two shapes of the one identity, each for the system that can read it.</p>
 <p>A bucket, a cache, a queue - same thing. <b><code>consumes</code> is for what nothing else states.</b></p>`,
     upstream: "Nothing. The database is outside the mesh too.",
     declared: [
@@ -446,7 +449,8 @@ spec:
         # ↓ where the certificate is traded for credentials
         - "./sts.us-east-1.amazonaws.com"
         # ↓ every table in the region shares this one host
-        - "./dynamodb.us-east-1.amazonaws.com"`,
+        - "./dynamodb.us-east-1.amazonaws.com"
+        # ...and one more from entra, on the next card`,
         sources: [composition("the Sidecar egress list", 1011, 1054)],
         actor: "caller",
       },
@@ -474,7 +478,7 @@ spec:
     section: {
       label: "Entra",
       blurb:
-        "Enforced by application code, against an identity provider outside the cluster. Runs only after every mesh gate has already said yes.",
+        "Enforced by application code, against an identity provider outside the cluster, and no team holds a secret. Runs only after every mesh gate has already said yes.",
     },
     kind: "entra · on-platform → on-platform",
     title: "A second gate, answering to someone else",
@@ -493,7 +497,9 @@ spec:
     },
     deep: `<p>Nothing replaces the mesh. All four checkpoints pass first, then a token is read. This gate can refuse what the mesh allowed, never permit what it refused.</p>
 <p><b>Two tokens, neither a password.</b> The pod's <b>SVID</b> says who it is - <code>sub</code> its SPIFFE ID, <code>aud</code> <code>api://AzureADTokenExchange</code>. Entra accepts it because a <b>federated credential</b> names those exact strings, matched literally. Back comes an <b>access token</b>: <code>azp</code> the caller, <code>aud</code> this API, <code>roles</code> what it holds. Only <code>roles</code> decides.</p>
-<p>The scope <code>&lt;this API&gt;/.default</code> means "every role I already hold". It cannot name one it was not granted - that needs a user to consent, and there is none.</p>
+<p><b>Why a federated credential and not a client secret.</b> The usual way is a password on the app registration, and it has to live somewhere - a vault, a Secret, a pipeline variable - rotated on a calendar and copied into every new environment. This replaces that string with a statement about who may ask. Nothing is issued to store, so nothing can leak, and revoking access is deleting an object rather than chasing copies.</p>
+<p>What the app presents instead is a file. A sidecar the platform adds keeps a fresh SVID at <code>/entra-identity/token</code>, and the app posts it as a <code>client_assertion</code>. It lasts minutes, is minted for that one audience, and the app holds no credential of its own.</p>
+<p>The scope <code>&lt;this API&gt;/.default</code> means "every role I already hold". It cannot name one it was not granted - that needs a user to consent, and there is none. The platform builds that scope from the <code>consumes</code> line on the mesh card, so one declaration opened the network path and named the API to ask against.</p>
 <p>The panel shows what the caller proved and what the callee received. The tokens never appear - each is a live credential, and this page is public.</p>`,
     declared: [
       {
@@ -501,6 +507,16 @@ spec:
   enabled: true
 # an identity, and nothing else. it grants nothing`,
         sources: [workspace("authorized-api.yaml", "the caller asks only for an identity", 12, 13)],
+        actor: "caller",
+      },
+      {
+        code: `consumes:
+  - namespace: platform-connections-demo
+    app: upstream-api
+# the mesh card's line again. it also names which API to ask a token for`,
+        sources: [
+          workspace("authorized-api.yaml", "the line the Entra scope is built from", 25, 27),
+        ],
         actor: "caller",
       },
       {
@@ -519,7 +535,22 @@ spec:
     ],
     rendered: [
       {
-        code: `# why Entra believes the pod at all.
+        code: `# the caller's own identity in Entra. no password field anywhere
+apiVersion: applications.azuread.upbound.io/v1beta2
+kind: Application
+metadata:
+  name: platform-connections-demo-authorized-api-entra
+spec:
+  forProvider:
+    displayName: platform-platform-connections-demo-authorized-api
+    api:
+      # v1 tokens are issued by sts.windows.net and fail issuer checks
+      requestedAccessTokenVersion: 2`,
+        sources: [composition("the Application template", 667, 697)],
+        actor: "caller",
+      },
+      {
+        code: `# why Entra believes the pod at all, and the reason there is no secret.
 # all three are matched literally - no wildcards, no prefixes
 apiVersion: applications.azuread.upbound.io/v1beta1
 kind: FederatedIdentityCredential
@@ -529,8 +560,31 @@ spec:
     subject: spiffe://homelab.local/ns/platform-connections-demo/sa/authorized-api
     audiences:
       - api://AzureADTokenExchange`,
-        sources: [composition("the FederatedIdentityCredential template", 715, 745)],
-        actor: "callee",
+        sources: [composition("the FederatedIdentityCredential template", 715, 734)],
+        actor: "caller",
+      },
+      {
+        code: `# what landed in the caller's pod. it reads these, and writes none of them
+env:
+  - name: AZURE_CLIENT_ID          # who it acts as
+  - name: AZURE_TENANT_ID
+  - name: AZURE_FEDERATED_TOKEN_FILE
+    value: /entra-identity/token   # the SVID, kept fresh by a sidecar
+  # ↓ one per app in consumes. the scope to ask a token for
+  - name: ENTRA_SCOPE_UPSTREAM_API
+    value: api://<tenant>/platform-platform-connections-demo-upstream-api/.default
+---
+# and the way out to Entra, which no team declared
+kind: Sidecar
+spec:
+  egress:
+    - hosts:
+        - "./login.microsoftonline.com"`,
+        sources: [
+          composition("the Entra env injection", 380, 398),
+          composition("login.microsoftonline.com, derived from entra.enabled", 128, 133),
+        ],
+        actor: "caller",
       },
       {
         code: `# the role this API offers
@@ -582,7 +636,8 @@ spec:
     },
     deep: `<p>Nothing changed about the caller - same certificate, same gates, same token, <code>roles</code> still holding <code>Data.Read</code>. This route wants a role that is not in the list, and no signed token can be talked into containing it.</p>
 <p><b>Being let in is not being allowed to do everything.</b> The mesh answers once, at the door, for the whole workload. This answers per route.</p>
-<p><b>Two 403s that look identical and are not.</b> The earlier came from a proxy reading a certificate, this from app code reading a claim - so the response says which gate answered.</p>`,
+<p><b>Two 403s that look identical and are not.</b> The earlier came from a proxy reading a certificate, this from app code reading a claim - so the response says which gate answered.</p>
+<p><b>Granting it is one line, and so is taking it back.</b> Adding this caller under <code>Data.Admin</code> renders one more <code>RoleAssignment</code>; deleting the line deletes the object, and the next token comes back without the role. Nothing to rotate, and no secret in anyone's hands to go and collect.</p>`,
     declared: [
       {
         code: `entra:
@@ -631,24 +686,72 @@ spec:
     ],
   },
   {
-    kind: "where this stops",
-    title: "Platform Connections stops at workload authorization",
+    kind: "how it holds together",
+    title: "One identity, read three ways",
     summary:
-      "Every call above was decided by which workload was calling, and what that workload had been granted. Never by who was using it.",
-    deep: `<p class="answers"><b>It authorizes workloads</b></p>
-<ul>
-  <li>Can this pod call that pod?</li>
-  <li>Can this pod reach this database?</li>
-  <li>Was this workload granted this role?</li>
-</ul>
-<p class="answers"><b>It does not authorize people</b></p>
-<ul class="not">
-  <li>Can Alice view Order 123?</li>
-  <li>Can Bob approve payroll?</li>
-</ul>
-<p>Both lists are authorization. The difference is <i>who</i> is being authorized. <code>Data.Read</code> was granted to an application, not to a person, and upstream-api cannot tell whether a human was anywhere near the call.</p>
+      "Every gate above decided against the same identity. The mesh reads it as a certificate; AWS and Entra each read it as a token. The app stores no secret for any of them.",
+    diagram: `<svg viewBox="0 0 1000 392" role="img" aria-label="One SPIRE identity, read three ways: as a certificate by the mesh, and as a token by AWS STS and Microsoft Entra.">
+  <defs>
+    <marker id="pc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="currentColor" fill-opacity="0.55"/>
+    </marker>
+  </defs>
+  <rect x="310" y="6" width="380" height="56" rx="8" fill="#1a1d27" stroke="#6366f1" stroke-opacity="0.7"/>
+  <text x="500" y="30" class="d-t">SPIRE</text>
+  <text x="500" y="49" class="d-s">issues one identity per workload</text>
+  <text x="500" y="84" class="d-id">spiffe://homelab.local/ns/&lt;namespace&gt;/sa/&lt;app&gt;</text>
+  <line x1="500" y1="92" x2="500" y2="116" stroke="#2e3347"/>
+  <line x1="170" y1="116" x2="830" y2="116" stroke="#2e3347"/>
+  <line x1="170" y1="116" x2="170" y2="132" stroke="#2e3347"/>
+  <rect x="30" y="132" width="280" height="56" rx="8" fill="#1a1d27" stroke="#03a9f4" stroke-opacity="0.55"/>
+  <text x="170" y="156" class="d-t">X.509 SVID</text>
+  <text x="170" y="175" class="d-s">presented on every connection</text>
+  <line x1="170" y1="188" x2="170" y2="200" stroke="#03a9f4" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="30" y="208" width="280" height="52" rx="8" fill="#1a1d27" stroke="#03a9f4" stroke-opacity="0.55"/>
+  <text x="170" y="230" class="d-t">Envoy sidecar</text>
+  <text x="170" y="248" class="d-s">checks the cluster CA</text>
+  <line x1="170" y1="260" x2="170" y2="272" stroke="#03a9f4" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="30" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#03a9f4" stroke-opacity="0.55"/>
+  <text x="170" y="302" class="d-t">mTLS on every call</text>
+  <text x="170" y="320" class="d-s">AuthorizationPolicy decides</text>
+  <line x1="170" y1="332" x2="170" y2="344" stroke="#03a9f4" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <text x="170" y="362" class="d-d" fill="#03a9f4">pod to pod</text>
+  <line x1="500" y1="116" x2="500" y2="132" stroke="#2e3347"/>
+  <rect x="360" y="132" width="280" height="56" rx="8" fill="#1a1d27" stroke="#ff4081" stroke-opacity="0.55"/>
+  <text x="500" y="156" class="d-t">JWT-SVID</text>
+  <text x="500" y="175" class="d-s">aud: sts.amazonaws.com</text>
+  <line x1="500" y1="188" x2="500" y2="200" stroke="#ff4081" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="360" y="208" width="280" height="52" rx="8" fill="#1a1d27" stroke="#ff4081" stroke-opacity="0.55"/>
+  <text x="500" y="230" class="d-t">AWS STS</text>
+  <text x="500" y="248" class="d-s">AssumeRoleWithWebIdentity</text>
+  <line x1="500" y1="260" x2="500" y2="272" stroke="#ff4081" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="360" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#ff4081" stroke-opacity="0.55"/>
+  <text x="500" y="302" class="d-t">temporary keys</text>
+  <text x="500" y="320" class="d-s">IAM policy decides</text>
+  <line x1="500" y1="332" x2="500" y2="344" stroke="#ff4081" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <text x="500" y="362" class="d-d" fill="#ff4081">DynamoDB</text>
+  <line x1="830" y1="116" x2="830" y2="132" stroke="#2e3347"/>
+  <rect x="690" y="132" width="280" height="56" rx="8" fill="#1a1d27" stroke="#a5b4fc" stroke-opacity="0.55"/>
+  <text x="830" y="156" class="d-t">JWT-SVID</text>
+  <text x="830" y="175" class="d-s">aud: api://AzureADTokenExchange</text>
+  <line x1="830" y1="188" x2="830" y2="200" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="690" y="208" width="280" height="52" rx="8" fill="#1a1d27" stroke="#a5b4fc" stroke-opacity="0.55"/>
+  <text x="830" y="230" class="d-t">Microsoft Entra</text>
+  <text x="830" y="248" class="d-s">client_assertion</text>
+  <line x1="830" y1="260" x2="830" y2="272" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <rect x="690" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#a5b4fc" stroke-opacity="0.55"/>
+  <text x="830" y="302" class="d-t">access token</text>
+  <text x="830" y="320" class="d-s">roles decides</text>
+  <line x1="830" y1="332" x2="830" y2="344" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
+  <text x="830" y="362" class="d-d" fill="#a5b4fc">upstream-api</text>
+</svg>`,
+    deep: `<p>SPIRE issues one identity per workload, named for the namespace and service account it runs as. Nothing above was configured with a credential - each system was told which issuer and subject to trust, and the pod presents the shape that system can read.</p>
 <hr class="close-rule" />
-<p><b>A mesh can already watch every call. So why declare?</b> Watching only shows what happened while something was looking, so the quarter-end job and the failover path are missing from that graph and live in production. Declaring costs a line in review. <i>Can we turn this off?</i> becomes a list of who declared it, not thirty days of silence, and an undeclared call is refused as it happens, not drawn on a dashboard for Monday.</p>`,
-    docs: [DESIGN_DOC, NOTHING_NOVEL, CROSSPLANE_ADOPTERS, ISTIO_CASE_STUDIES],
+<p class="answers"><b>Not demonstrated here</b></p>
+<ul class="not">
+  <li><b>Authorizing people.</b> <code>Data.Read</code> was granted to an application. upstream-api cannot tell whether a human was anywhere near the call, or which one.</li>
+  <li><b>On-behalf-of.</b> Trading a signed-in user's token for a downstream one, so the callee sees both the app and the person, is a separate flow and none of the above would carry it.</li>
+</ul>`,
+    docs: [NOTHING_NOVEL],
   },
 ]

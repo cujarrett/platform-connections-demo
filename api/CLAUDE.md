@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # api
 
-Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-connections mesh test (see `docs/platform-engineering-connections.md` in the homelab repo) - the protected upstream service that `authorized-api` and `unauthorized-api` call.
+Go HTTP API. Single binary, no frameworks. The upstream service in the homelab platform-connections demo (see [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo), deployed as `upstream-api`. Two independent gates: the mesh decides whether the connection is carried, then app code decides whether the identity holds the role a route needs.
 
 ## Commands
 | Command | What it does |
@@ -35,7 +35,9 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 | Method | Path | Description |
 |---|---|---|
 | GET | `/healthz` | Liveness probe |
-| GET | `/api/v1/data` | Protected data |
+| GET | `/api/v1/data` | Mesh-only - whoever the mesh lets through is served |
+| GET | `/api/v1/protected` | Requires the `Data.Read` app role in the Entra token |
+| GET | `/api/v1/admin` | Requires `Data.Admin`, granted to nobody - always 403 |
 | GET | `/metrics` | Prometheus metrics on `METRICS_PORT` (9090) - the platform scrapes every Api, so this route is required |
 
 ## Conventions
@@ -44,3 +46,5 @@ Go HTTP API. Single binary, no frameworks. POC app for the homelab platform-conn
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON
 - Binary name matches repo name
+- A refusal always names the gate that answered - a mesh 403 and a role 403 are indistinguishable otherwise
+- `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` come from the platform. Unset means the role routes refuse everything rather than verify half a token

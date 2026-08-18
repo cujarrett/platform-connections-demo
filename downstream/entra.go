@@ -57,6 +57,23 @@ func svidSubject() string {
 	return c.Sub
 }
 
+// What this side of the exchange looked like. A GUID on its own says nothing, so the
+// client id is shown next to the app it belongs to.
+type exchangedView struct {
+	Proved   string `json:"proved"`
+	AskedFor string `json:"asked_for"`
+	As       string `json:"as"`
+}
+
+// The app name is the last segment of the SPIFFE ID this pod already proved.
+func appNameFromSVID() string {
+	sub := svidSubject()
+	if i := strings.LastIndex(sub, "/"); i >= 0 {
+		return sub[i+1:]
+	}
+	return sub
+}
+
 // Trades this pod's SVID for an Entra access token. No secret involved - the SVID is
 // the proof, and the federated credential is why Entra accepts it.
 func fetchEntraToken(ctx context.Context) (string, error) {
@@ -176,15 +193,18 @@ func entraHandler(name, target string) http.HandlerFunc {
 		// What this side of the exchange looked like. The SVID and the access token are
 		// both credentials, so neither appears here - only the identity that was proven
 		// and the API it was traded for, both of which are already public config.
-		var upstreamView map[string]any
-		json.Unmarshal(body, &upstreamView) //nolint:errcheck
-		out, err := json.Marshal(map[string]any{
-			"exchanged": map[string]string{
-				"proved":    svidSubject(),
-				"asked_for": entraScope(),
-				"as":        os.Getenv("AZURE_CLIENT_ID"),
+		// The callee's verdict first - it is the thing worth reading. A struct, not a
+		// map, because Go sorts map keys and would lead with a GUID.
+		out, err := json.Marshal(struct {
+			Upstream  json.RawMessage `json:"upstream_said"`
+			Exchanged exchangedView   `json:"exchanged"`
+		}{
+			Upstream: json.RawMessage(body),
+			Exchanged: exchangedView{
+				Proved:   svidSubject(),
+				AskedFor: entraScope(),
+				As:       os.Getenv("AZURE_CLIENT_ID") + " · " + appNameFromSVID(),
 			},
-			"upstream_said": upstreamView,
 		})
 		if err != nil {
 			writeJSONError(w, "encode response failed", http.StatusInternalServerError)

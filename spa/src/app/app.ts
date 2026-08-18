@@ -33,8 +33,7 @@ const POD_CLASS: Record<string, string> = {
   "upstream-api": "pod-callee",
   "api.open-meteo.com": "pod-metro",
   "example.com": "pod-example",
-  "s3.amazonaws.com": "pod-s3",
-  "dynamodb.amazonaws.com": "pod-dynamo",
+  "dynamodb.us-east-1.amazonaws.com": "pod-dynamo",
 }
 const podClassOf = (name: string): string => POD_CLASS[name] ?? "pod-site"
 
@@ -96,7 +95,7 @@ interface Result {
           Kubernetes runs the workloads. Service Mesh decides which calls get through.
         </p>
         <p class="sub">
-          Six live calls, run against
+          Seven live calls, run against
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
             >my bookshelf Kubernetes cluster</a
           >.
@@ -116,7 +115,7 @@ interface Result {
             <p>{{ c.section.blurb }}</p>
           </div>
         }
-        <section class="case" [class]="verdict(i)" [id]="'case-' + i">
+        <section class="case" [class]="verdict(i)" [class.wide]="!!c.diagram" [id]="'case-' + i">
           <div class="narrative">
             <span class="kind" [class.entra]="c.kind.startsWith('entra')">{{ c.kind }}</span>
             <h2>{{ c.title }}</h2>
@@ -201,8 +200,10 @@ interface Result {
                 </button>
               </div>
 
+              <!-- Suppressed where the token panel renders it properly - the raw line is
+                   the same data truncated mid-GUID, which reads as noise beside a table. -->
               <div class="body-slot">
-                @if (results()[i].state === "done") {
+                @if (results()[i].state === "done" && tokenRows(i, "proved").length === 0) {
                   <span class="body-arrow">↳</span>
                   <span class="body-text" [class.denied]="verdict(i) === 'deny'">{{
                     responseBody(i)
@@ -212,6 +213,43 @@ interface Result {
                   }
                 }
               </div>
+
+              <!-- Entra only, and only once the call has run. Claims come from the live
+                   response - no token, no signature, no SVID ever reaches the browser. -->
+              @if (tokenRows(i, "proved").length > 0) {
+                <div class="tokens">
+                  <div class="token-col">
+                    <div class="token-h">what the caller proved</div>
+                    <div class="token-sub">its SVID, issued by the platform</div>
+                    @for (r of tokenRows(i, "proved"); track r.k) {
+                      <div class="token-row">
+                        <span class="token-k">{{ r.k }}</span>
+                        <span class="token-v">{{ r.v }}</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="token-col">
+                    <div class="token-h">what the callee received</div>
+                    <div class="token-sub">an Entra access token, traded for that SVID</div>
+                    @for (r of tokenRows(i, "received"); track r.k) {
+                      <div class="token-row">
+                        <span class="token-k">{{ r.k }}</span>
+                        <span
+                          class="token-v"
+                          [class.decides]="r.k === 'roles'"
+                          [class.short]="r.k === 'expires in'"
+                          >{{ r.v }}</span
+                        >
+                      </div>
+                    }
+                    @if (verdict(i) === "deny" && roleWanted(i)) {
+                      <div class="token-verdict">
+                        this route wanted <b>{{ roleWanted(i) }}</b> - not in roles
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
 
               <div class="why-slot">
                 @if (verdict(i) === "broken") {
@@ -270,6 +308,9 @@ interface Result {
 
             <ng-template #detail>
               <div class="deep">
+                @if (c.diagram; as svg) {
+                  <div class="diagram" [innerHTML]="html(svg)"></div>
+                }
                 <div [innerHTML]="html(c.deep)"></div>
                 @if (c.docs; as docs) {
                   <div class="srcs">
@@ -418,10 +459,54 @@ export class App {
     return this.results()[i].body.trimStart().startsWith("RBAC:")
   }
 
+  /** One row of the token panel. */
+  tokenRows(i: number, side: "proved" | "received"): { k: string; v: string }[] {
+    const b = this.parsedBody(i)
+    if (!b) return []
+    if (side === "proved") {
+      const e = b["exchanged"] as Record<string, unknown> | undefined
+      if (!e) return []
+      return [
+        { k: "sub", v: String(e["proved"] ?? "") },
+        { k: "scope asked for", v: String(e["asked_for"] ?? "") },
+        { k: "acting as", v: String(e["as"] ?? "") },
+      ].filter((r) => r.v)
+    }
+    const up = b["upstream_said"] as Record<string, unknown> | undefined
+    const p = up?.["presented"] as Record<string, unknown> | undefined
+    if (!p) return []
+    const one = (v: unknown) => (Array.isArray(v) ? v.join(", ") : String(v ?? ""))
+    return [
+      { k: "iss", v: one(p["iss"]) },
+      { k: "aud", v: one(p["aud"]) },
+      { k: "azp", v: one(p["azp"]) },
+      { k: "roles", v: one(p["roles"]) },
+      { k: "expires in", v: one(p["expires_in"]) },
+    ].filter((r) => r.v)
+  }
+
+  /** The role this route wanted, when the callee refused for want of it. */
+  roleWanted(i: number): string {
+    const up = this.parsedBody(i)?.["upstream_said"] as Record<string, unknown> | undefined
+    return String(up?.["needs"] ?? "")
+  }
+
+  private parsedBody(i: number): Record<string, unknown> | null {
+    const raw = this.results()[i].body
+    if (!raw.trimStart().startsWith("{")) return null
+    try {
+      return JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      return null
+    }
+  }
+
   responseBody(i: number): string {
     const body = this.results()[i].body
     if (/^\s*<(!doctype|html)/i.test(body)) return "(origin error page, no body from the app)"
-    return body.length > 96 ? body.slice(0, 96) + " …" : body
+    // Long enough to reach the claims. At 96 a single GUID and a URI used the whole
+    // budget, so the part worth reading was always the part cut off.
+    return body.length > 340 ? body.slice(0, 340) + " …" : body
   }
 
   /** The invite matches what just happened, so it reads as the obvious next question. */
