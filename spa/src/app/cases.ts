@@ -686,10 +686,11 @@ spec:
     ],
   },
   {
-    kind: "how it holds together",
-    title: "One identity, read three ways",
+    kind: "",
+    title: "",
     summary:
-      "Every gate above decided against the same identity. The mesh reads it as a certificate; AWS and Entra each read it as a token. The app stores no secret for any of them.",
+      "",
+    deep: "",
     diagram: `<svg viewBox="0 0 1000 392" role="img" aria-label="One SPIRE identity, read three ways: as a certificate by the mesh, and as a token by AWS STS and Microsoft Entra.">
   <defs>
     <marker id="pc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
@@ -723,7 +724,7 @@ spec:
   <line x1="500" y1="188" x2="500" y2="200" stroke="#ff4081" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <rect x="360" y="208" width="280" height="52" rx="8" fill="#1a1d27" stroke="#ff4081" stroke-opacity="0.55"/>
   <text x="500" y="230" class="d-t">AWS STS</text>
-  <text x="500" y="248" class="d-s">AssumeRoleWithWebIdentity</text>
+  <text x="500" y="248" class="d-s">AssumeRoleWithWebIdentity (AWS SDK)</text>
   <line x1="500" y1="260" x2="500" y2="272" stroke="#ff4081" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <rect x="360" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#ff4081" stroke-opacity="0.55"/>
   <text x="500" y="302" class="d-t">temporary keys</text>
@@ -737,7 +738,7 @@ spec:
   <line x1="830" y1="188" x2="830" y2="200" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <rect x="690" y="208" width="280" height="52" rx="8" fill="#1a1d27" stroke="#a5b4fc" stroke-opacity="0.55"/>
   <text x="830" y="230" class="d-t">Microsoft Entra</text>
-  <text x="830" y="248" class="d-s">client_assertion</text>
+  <text x="830" y="248" class="d-s">client_assertion (MSAL)</text>
   <line x1="830" y1="260" x2="830" y2="272" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <rect x="690" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#a5b4fc" stroke-opacity="0.55"/>
   <text x="830" y="302" class="d-t">access token</text>
@@ -745,13 +746,6 @@ spec:
   <line x1="830" y1="332" x2="830" y2="344" stroke="#a5b4fc" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <text x="830" y="362" class="d-d" fill="#a5b4fc">upstream-api</text>
 </svg>`,
-    deep: `<p>SPIRE issues one identity per workload, named for the namespace and service account it runs as. Nothing above was configured with a credential - each system was told which issuer and subject to trust, and the pod presents the shape that system can read.</p>
-<hr class="close-rule" />
-<p class="answers"><b>Not demonstrated here</b></p>
-<ul class="not">
-  <li><b>Authorizing people.</b> <code>Data.Read</code> was granted to an application. upstream-api cannot tell whether a human was anywhere near the call, or which one.</li>
-  <li><b>On-behalf-of.</b> Trading a signed-in user's token for a downstream one, so the callee sees both the app and the person, is a separate flow and none of the above would carry it.</li>
-</ul>`,
     docs: [NOTHING_NOVEL],
   },
 ]

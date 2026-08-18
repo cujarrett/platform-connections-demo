@@ -131,10 +131,14 @@ func checkRole(w http.ResponseWriter, r *http.Request, requiredRole string) {
 	// Field order is the reading order, and a bare GUID teaches nothing - each one is
 	// labelled with what it identifies. Structs, not maps: Go sorts map keys, which
 	// would put the GUIDs first and the decision last.
+	//
+	// The label goes before the GUID, not after: this row is one line, scrolled rather
+	// than wrapped (styles.css .token-v), so anything placed after a 36-character GUID
+	// is off-screen until a reader thinks to scroll for it.
 	presented := tokenView{
 		Roles:     claims.Roles,
-		Azp:       claims.AppID + " · the caller",
-		Aud:       strings.Join(tok.Audience, ", ") + " · this API",
+		Azp:       "the caller · " + claims.AppID,
+		Aud:       "this API · " + strings.Join(tok.Audience, ", "),
 		Iss:       tok.Issuer,
 		ExpiresIn: fmt.Sprintf("%ds", max(0, int64(time.Until(tok.Expiry).Seconds()))),
 	}

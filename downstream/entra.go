@@ -6,21 +6,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 )
 
-// One cached access token. Entra issues these for about an hour, independent of the
-// SVID underneath being refreshed every few minutes.
+// Built once. WorkloadIdentityCredential re-reads AZURE_FEDERATED_TOKEN_FILE on every
+// GetToken call and caches the resulting access token itself, so there is nothing left
+// for this app to cache or refresh by hand.
 var (
-	entraMu      sync.Mutex
-	entraCached  string
-	entraExpires time.Time
+	entraCredOnce sync.Once
+	entraCred     *azidentity.WorkloadIdentityCredential
+	entraCredErr  error
 )
+
+func entraCredential() (*azidentity.WorkloadIdentityCredential, error) {
+	entraCredOnce.Do(func() {
+		entraCred, entraCredErr = azidentity.NewWorkloadIdentityCredential(nil)
+	})
+	return entraCred, entraCredErr
+}
 
 // Names the API being asked for. Injected by the platform, one per app this one
 // already declared in consumes - the URI format is the platform's own, so building it
@@ -31,9 +41,8 @@ func entraScope() string {
 	return os.Getenv("ENTRA_SCOPE_UPSTREAM_API")
 }
 
-// svidSubject reads the sub claim out of this pod's own SVID, which is the identity
-// the federated credential is matched against. Only that one claim is returned - the
-// SVID is what proves this workload is itself, so it never leaves the process. No
+// svidSubject reads the sub claim out of this pod's own SVID, for display only - the
+// credential above reads the same file itself to build the actual assertion. No
 // verification here: it is our own token, read from our own file, and used for display.
 func svidSubject() string {
 	raw, err := os.ReadFile(os.Getenv("AZURE_FEDERATED_TOKEN_FILE"))
@@ -65,6 +74,18 @@ type exchangedView struct {
 	As       string `json:"as"`
 }
 
+// scopeLabel pulls the app name out of "api://<tenant-guid>/<app-name>/.default" - the
+// one part of the scope worth reading. This row is one line, scrolled rather than
+// wrapped (styles.css .token-v), so without this the readable segment sits behind a
+// 36-character tenant GUID that nobody scrolls past to find it.
+func scopeLabel(scope string) string {
+	parts := strings.Split(strings.TrimPrefix(scope, "api://"), "/")
+	if len(parts) >= 2 && parts[1] != "" {
+		return parts[1]
+	}
+	return scope
+}
+
 // The app name is the last segment of the SPIFFE ID this pod already proved.
 func appNameFromSVID() string {
 	sub := svidSubject()
@@ -74,84 +95,32 @@ func appNameFromSVID() string {
 	return sub
 }
 
-// Trades this pod's SVID for an Entra access token. No secret involved - the SVID is
-// the proof, and the federated credential is why Entra accepts it.
+// Trades this pod's SVID for an Entra access token via the same Azure SDK a real
+// platform user would reach for - WorkloadIdentityCredential is built for exactly this
+// federated-credential shape. No secret involved - the SVID is the proof, and the
+// federated credential is why Entra accepts it.
 func fetchEntraToken(ctx context.Context) (string, error) {
-	entraMu.Lock()
-	defer entraMu.Unlock()
-
-	// Refresh a minute early - a token expiring mid-flight fails at the callee and
-	// looks exactly like a refusal.
-	if entraCached != "" && time.Now().Before(entraExpires.Add(-time.Minute)) {
-		return entraCached, nil
-	}
-
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-	clientID := os.Getenv("AZURE_CLIENT_ID")
-	tokenFile := os.Getenv("AZURE_FEDERATED_TOKEN_FILE")
-	if tenantID == "" || clientID == "" || tokenFile == "" {
-		return "", fmt.Errorf("entra not configured on this pod")
-	}
 	// Set by the platform from consumes. Missing means this Api never declared that it
 	// calls upstream-api, so there is no API to ask for a token against.
 	if entraScope() == "" {
 		return "", fmt.Errorf("no Entra scope for upstream-api - is it in consumes?")
 	}
 
-	assertion, err := os.ReadFile(tokenFile)
+	cred, err := entraCredential()
 	if err != nil {
-		return "", fmt.Errorf("read svid: %w", err)
+		return "", fmt.Errorf("entra not configured on this pod: %w", err)
 	}
 
-	form := url.Values{
-		"grant_type":            {"client_credentials"},
-		"client_id":             {clientID},
-		"client_assertion_type": {"urn:ietf:params:oauth:client-assertion-type:jwt-bearer"},
-		"client_assertion":      {strings.TrimSpace(string(assertion))},
-		"scope":                 {entraScope()},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://login.microsoftonline.com/"+tenantID+"/oauth2/v2.0/token",
-		strings.NewReader(form.Encode()))
+	tok, err := cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{entraScope()}})
 	if err != nil {
-		return "", err
+		// azidentity.AuthenticationFailedError.Error() dumps the full token-endpoint
+		// request URL and response body - correlation IDs, timestamps, diagnostic
+		// text. This response is public, so only a fixed reason leaves the process;
+		// the real error goes to the log instead.
+		slog.Warn("entra token exchange failed", "err", err)
+		return "", fmt.Errorf("token endpoint refused the request")
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("token endpoint: %w", err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
-	if err != nil {
-		return "", err
-	}
-	if resp.StatusCode != http.StatusOK {
-		// Only the error code, never the body - it can echo the assertion back.
-		var e struct {
-			Error string `json:"error"`
-		}
-		json.Unmarshal(body, &e) //nolint:errcheck
-		return "", fmt.Errorf("token endpoint refused: %s (%d)", e.Error, resp.StatusCode)
-	}
-
-	var tok struct {
-		AccessToken string `json:"access_token"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-	if err := json.Unmarshal(body, &tok); err != nil {
-		return "", err
-	}
-	if tok.AccessToken == "" {
-		return "", fmt.Errorf("token endpoint returned no access_token")
-	}
-
-	entraCached = tok.AccessToken
-	entraExpires = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-	return entraCached, nil
+	return tok.Token, nil
 }
 
 // One token, two routes. The same identity is granted the role one of them needs and
@@ -202,8 +171,8 @@ func entraHandler(name, target string) http.HandlerFunc {
 			Upstream: json.RawMessage(body),
 			Exchanged: exchangedView{
 				Proved:   svidSubject(),
-				AskedFor: entraScope(),
-				As:       os.Getenv("AZURE_CLIENT_ID") + " · " + appNameFromSVID(),
+				AskedFor: scopeLabel(entraScope()) + " · " + entraScope(),
+				As:       appNameFromSVID() + " · " + os.Getenv("AZURE_CLIENT_ID"),
 			},
 		})
 		if err != nil {

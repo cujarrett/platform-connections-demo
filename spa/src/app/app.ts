@@ -117,9 +117,15 @@ interface Result {
         }
         <section class="case" [class]="verdict(i)" [class.wide]="!!c.diagram" [id]="'case-' + i">
           <div class="narrative">
-            <span class="kind" [class.entra]="c.kind.startsWith('entra')">{{ c.kind }}</span>
-            <h2>{{ c.title }}</h2>
-            <p class="summary">{{ c.summary }}</p>
+            @if (c.kind) {
+              <span class="kind" [class.entra]="c.kind.startsWith('entra')">{{ c.kind }}</span>
+            }
+            @if (c.title) {
+              <h2>{{ c.title }}</h2>
+            }
+            @if (c.summary) {
+              <p class="summary">{{ c.summary }}</p>
+            }
           </div>
 
           <div
