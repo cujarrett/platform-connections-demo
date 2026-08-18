@@ -233,9 +233,11 @@ interface Result {
                         @if (r.k === "acting as" && linkedIds(i)) {
                           <span class="token-v"
                             >{{ labelPart(r.v)
-                            }}<span class="token-id linked" title="matches azp on the callee's side">{{
-                              idPart(r.v)
-                            }}</span></span
+                            }}<span
+                              class="token-id linked"
+                              title="matches azp on the callee's side"
+                              >{{ idPart(r.v) }}</span
+                            ></span
                           >
                         } @else {
                           <span class="token-v">{{ r.v }}</span>
@@ -252,9 +254,11 @@ interface Result {
                         @if (r.k === "azp" && linkedIds(i)) {
                           <span class="token-v"
                             >{{ labelPart(r.v)
-                            }}<span class="token-id linked" title="matches acting-as on the caller's side">{{
-                              idPart(r.v)
-                            }}</span></span
+                            }}<span
+                              class="token-id linked"
+                              title="matches acting-as on the caller's side"
+                              >{{ idPart(r.v) }}</span
+                            ></span
                           >
                         } @else {
                           <span
