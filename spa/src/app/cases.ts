@@ -688,8 +688,7 @@ spec:
   {
     kind: "",
     title: "",
-    summary:
-      "",
+    summary: "",
     deep: "",
     diagram: `<svg viewBox="0 0 1000 392" role="img" aria-label="One SPIRE identity, read three ways: as a certificate by the mesh, and as a token by AWS STS and Microsoft Entra.">
   <defs>
