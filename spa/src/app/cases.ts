@@ -514,7 +514,9 @@ spec:
   - namespace: platform-connections-demo
     app: upstream-api
 # no identity is declared. calling an app on the platform is what earns one`,
-        sources: [workspace("authorized-api.yaml", "the caller declares only what it calls", 23, 25)],
+        sources: [
+          workspace("authorized-api.yaml", "the caller declares only what it calls", 23, 25),
+        ],
         actor: "caller",
       },
       {
