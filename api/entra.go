@@ -15,7 +15,7 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 )
 
-// Role names as declared under entra.roles in this Api's workspace file. Declared and
+// Role names as declared under provides with auth: workload in this Api's workspace file. Declared and
 // granted there; only checked here. Data.Admin is offered to nobody, so holding an
 // identity this API trusts is still not enough to pass it.
 const (

@@ -27,7 +27,7 @@ Every refusal carries `"gate"`, because a mesh 403 and a role 403 are otherwise 
 
 ## Environment variables
 
-Both `AZURE_` values are injected by the platform from `entra.enabled`. Unset either and the role routes refuse everything rather than verify half a token; the mesh routes are unaffected.
+Both `AZURE_` values are injected by the platform once an interface sets `auth: workload` or `auth: user`. Unset either and the role routes refuse everything rather than verify half a token; the mesh routes are unaffected.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
