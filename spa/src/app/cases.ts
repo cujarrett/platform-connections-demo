@@ -513,17 +513,8 @@ spec:
         code: `consumes:
   - namespace: platform-connections-demo
     app: upstream-api
-# no identity is declared. calling an app on the platform is what earns one`,
-        sources: [
-          workspace("authorized-api.yaml", "the caller declares only what it calls", 23, 25),
-        ],
-        actor: "caller",
-      },
-      {
-        code: `consumes:
-  - namespace: platform-connections-demo
-    app: upstream-api
-# the mesh card's line again. it also names which API to ask a token for`,
+# no identity is declared. the same line opens the network path and names
+# which API to ask a token for`,
         sources: [
           workspace("authorized-api.yaml", "the line the Entra scope is built from", 23, 25),
         ],
