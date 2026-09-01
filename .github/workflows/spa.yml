@@ -6,8 +6,6 @@ on:
     paths:
       - 'spa/**'
   pull_request:
-    paths:
-      - 'spa/**'
   workflow_dispatch:
 
 jobs:

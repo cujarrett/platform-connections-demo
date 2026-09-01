@@ -6,8 +6,6 @@ on:
     paths:
       - 'downstream/**'
   pull_request:
-    paths:
-      - 'downstream/**'
   workflow_dispatch:
 
 jobs:
