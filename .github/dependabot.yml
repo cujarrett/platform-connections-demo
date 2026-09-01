@@ -1,15 +1,20 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-# One update config per (ecosystem, directory) - Dependabot rejects duplicates.
-# minor/patch are grouped into one PR; major updates arrive as separate PRs.
+
+# One block per (ecosystem, directory) - a duplicate pair makes Dependabot
+# reject the whole file and open nothing at all.
 
 version: 2
 updates:
   - package-ecosystem: "gomod"
     directory: "/api"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
+      time: "17:00"
+      timezone: "America/Chicago"
     cooldown:
       default-days: 7
+    open-pull-requests-limit: 2
     groups:
       non-breaking:
         update-types:
@@ -19,9 +24,13 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/downstream"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
+      time: "17:00"
+      timezone: "America/Chicago"
     cooldown:
       default-days: 7
+    open-pull-requests-limit: 2
     groups:
       non-breaking:
         update-types:
@@ -31,9 +40,13 @@ updates:
   - package-ecosystem: "npm"
     directory: "/spa"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "friday"
+      time: "17:00"
+      timezone: "America/Chicago"
     cooldown:
       default-days: 7
+    open-pull-requests-limit: 2
     groups:
       non-breaking:
         update-types:
@@ -44,8 +57,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "friday"
+      time: "17:00"
+      timezone: "America/Chicago"
     cooldown:
       default-days: 7
+    open-pull-requests-limit: 2
     groups:
       actions:
         update-types:
