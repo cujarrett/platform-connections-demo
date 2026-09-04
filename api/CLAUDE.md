@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # api
 
-Go HTTP API. Single binary, no frameworks. The upstream service in the homelab platform-connections demo (see [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo), deployed as `upstream-api`. Two independent gates: the mesh decides whether the connection is carried, then app code decides whether the identity holds the role a route needs.
+Go HTTP API. Single binary, no frameworks. The upstream service in the homelab platform-connections demo (see [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/platform/docs/connections.md) in the homelab repo), deployed as `upstream-api`. Two independent gates: the mesh decides whether the connection is carried, then app code decides whether the identity holds the role a route needs.
 
 ## Commands
 | Command | What it does |

@@ -2,7 +2,7 @@
 
 The API being called, deployed as `upstream-api`. It grants one caller at the mesh and one role inside the app.
 
-What that means and why is the walkthrough itself, at [connections.mattjarrett.dev](https://connections.mattjarrett.dev), designed in [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md). This file is what you need to change the code.
+What that means and why is the walkthrough itself, at [connections.mattjarrett.dev](https://connections.mattjarrett.dev), designed in [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/platform/docs/connections.md). This file is what you need to change the code.
 
 ## Commands
 

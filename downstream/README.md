@@ -2,7 +2,7 @@
 
 The caller. One image deployed twice, as `authorized-api` and `unauthorized-api`, so the only difference between them is what each declares.
 
-What each route proves is the walkthrough itself, at [connections.mattjarrett.dev](https://connections.mattjarrett.dev), designed in [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md). This file is what you need to change the code.
+What each route proves is the walkthrough itself, at [connections.mattjarrett.dev](https://connections.mattjarrett.dev), designed in [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/platform/docs/connections.md). This file is what you need to change the code.
 
 ## Commands
 

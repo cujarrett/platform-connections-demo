@@ -21,7 +21,7 @@ Before telling the user to commit, always run `/security-review`. It reviews the
 
 # downstream
 
-Go HTTP API. Single binary, no frameworks. The caller in the homelab platform-connections demo. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/docs/platform-connections.md) in the homelab repo - exercises internal (mTLS), external (`ServiceEntry`), Entra and bound-resource paths. Identity-agnostic: one image deployed twice, as `authorized-api` and `unauthorized-api`, so the only difference is what each instance declares.
+Go HTTP API. Single binary, no frameworks. The caller in the homelab platform-connections demo. See [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/platform/docs/connections.md) in the homelab repo - exercises internal (mTLS), external (`ServiceEntry`), Entra and bound-resource paths. Identity-agnostic: one image deployed twice, as `authorized-api` and `unauthorized-api`, so the only difference is what each instance declares.
 
 ## Commands
 | Command | What it does |
