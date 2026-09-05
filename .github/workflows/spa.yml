@@ -80,4 +80,4 @@ jobs:
       image: ghcr.io/cujarrett/platform-connections-demo-spa
       file: platform-connections-demo/connections-demo.yaml
     secrets:
-      homelab_pat: ${{ secrets.HOMELAB_PAT }}
+      homelab_pat: ${{ secrets.HOMELAB_WORKSPACES_PAT }}
