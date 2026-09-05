@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  downstream-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -28,7 +28,7 @@ jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
-    needs: test
+    needs: downstream-test
     if: github.ref == 'refs/heads/main'
 
     permissions:
