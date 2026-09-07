@@ -5,7 +5,7 @@ const span = (cls: string, text: string): string =>
   text ? `<span class="${cls}">${escapeHtml(text)}</span>` : ""
 
 /**
- * Colours the small slice of YAML these cards use. A full highlighter is a large
+ * Colors the small slice of YAML these cards use. A full highlighter is a large
  * dependency for five short snippets, and since every snippet is block style there
  * is at most one key per line, which keeps this honest rather than approximate.
  */

@@ -15,7 +15,7 @@ export interface Source {
 export interface Snippet {
   code: string
   sources: Source[]
-  /** Whose pod this belongs to. Colours the block in that actor's hue, so a reader
+  /** Whose pod this belongs to. Colors the block in that actor's hue, so a reader
    *  tracks ownership by sight instead of by counting rows across two columns. */
   actor?: "caller" | "callee"
 }

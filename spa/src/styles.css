@@ -91,7 +91,7 @@ pre code {
   padding: 0;
 }
 
-/* YAML syntax colours - see yaml-highlight.ts. Muted rather than neon so the
+/* YAML syntax colors - see yaml-highlight.ts. Muted rather than neon so the
    green here never competes with the green that means "allowed". */
 .y-key {
   color: #e58fbe;
@@ -397,7 +397,7 @@ h2 {
   margin-top: 0.3rem;
 }
 /* A ring, not a border colour - .pod.acting is two classes and would otherwise
-   outrank the single-class actor colours, wiping the character hue off exactly the
+   outrank the single-class actor colors, wiping the character hue off exactly the
    pod being pointed at. */
 .pod.acting {
   box-shadow: 0 0 0 1px var(--color-text-muted);
