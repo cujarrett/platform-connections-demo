@@ -123,6 +123,21 @@ const KIND_FILL: Record<string, string> = {
             }
           </ol>
         </div>
+
+        <div class="topo-card">
+          <h3>Reading the map</h3>
+          <ul class="topo-legend">
+            <li><span class="sw d"></span>a team declared it</li>
+            <li><span class="sw b"></span>the platform built it</li>
+            <li><span class="sw t"></span>a token in flight</li>
+          </ul>
+          <p class="topo-note">
+            A pod cannot ask for an identity it is not running as, because the SPIRE agent checks
+            with the node's own kubelet before anything is signed. And nothing here shares a secret:
+            AWS and Entra each fetch the cluster's public keys and check the signature themselves,
+            so the only thing that ever moves is a token that expires in minutes.
+          </p>
+        </div>
       </div>
     </section>
   `,
@@ -322,7 +337,7 @@ const KIND_FILL: Record<string, string> = {
 
       .topo-strip {
         display: grid;
-        grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 21rem) minmax(0, 15rem) minmax(0, 1fr);
         gap: 1px;
         background: var(--color-border);
         border-top: 1px solid var(--color-border);
@@ -343,6 +358,42 @@ const KIND_FILL: Record<string, string> = {
         text-transform: uppercase;
         color: var(--color-text-muted);
         margin: 0 0 0.5rem;
+      }
+      .topo-legend {
+        list-style: none;
+        margin: 0 0 0.7rem;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.72rem;
+        color: var(--color-text-muted);
+      }
+      .topo-legend li {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+      .topo-legend .sw {
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 3px;
+        flex: none;
+      }
+      .topo-legend .d {
+        background: var(--topo-declared);
+      }
+      .topo-legend .b {
+        background: var(--topo-built);
+      }
+      .topo-legend .t {
+        background: var(--topo-token);
+      }
+      .topo-note {
+        margin: 0;
+        font-size: 0.72rem;
+        color: var(--color-text-muted);
+        max-width: 52ch;
       }
       .topo-yaml {
         margin: 0;
