@@ -10,6 +10,7 @@ import { DomSanitizer, SafeHtml } from "@angular/platform-browser"
 import { NgTemplateOutlet } from "@angular/common"
 import { CASES, Case, Snippet } from "./cases"
 import { highlightYaml } from "./yaml-highlight"
+import { Topology } from "./topology"
 import { LaunchpadMark } from "./launchpad-mark"
 
 type Actor = "caller" | "callee"
@@ -83,7 +84,7 @@ interface Result {
 
 @Component({
   selector: "app-root",
-  imports: [NgTemplateOutlet, LaunchpadMark],
+  imports: [NgTemplateOutlet, LaunchpadMark, Topology],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="scroll-progress" [style.width.%]="progress()"></div>
@@ -114,6 +115,9 @@ interface Result {
             <h2>{{ c.section.label }}</h2>
             <p>{{ c.section.blurb }}</p>
           </div>
+        }
+        @if (i === cases.length - 1) {
+          <app-topology />
         }
         <section class="case" [class]="verdict(i)" [class.wide]="!!c.diagram" [id]="'case-' + i">
           <div class="narrative">
