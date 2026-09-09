@@ -2,7 +2,7 @@ module github.com/cujarrett/platform-connections-demo/api
 
 go 1.26
 
-require github.com/coreos/go-oidc/v3 v3.20.0
+require github.com/coreos/go-oidc/v3 v3.21.0
 
 require (
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
