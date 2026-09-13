@@ -1,6 +1,6 @@
 # api
 
-The API being called, deployed as `upstream-api`. It grants one caller at the mesh and one role inside the app.
+The API being called, deployed as `upstream-api`. Any workload in the mesh can reach it, and the app grants one role to one caller.
 
 What that means and why is the walkthrough itself, at [connections.mattjarrett.dev](https://connections.mattjarrett.dev), designed in [Platform Engineering: Connections](https://github.com/cujarrett/homelab/blob/main/platform/docs/connections.md). This file is what you need to change the code.
 
@@ -23,7 +23,7 @@ What that means and why is the walkthrough itself, at [connections.mattjarrett.d
 | `GET` | `/api/v1/admin` | Requires `Data.Admin`, granted to nobody - always 403 |
 | `GET` | `/metrics` | Prometheus metrics on `METRICS_PORT` - build info, protected reads, and role decisions split by outcome |
 
-Every refusal carries `"gate"`, because a mesh 403 and a role 403 are otherwise indistinguishable. `401` means the token was not believed, not that the caller was refused.
+Every refusal carries `"gate"`, naming the check that failed, so a bare 403 never has to be guessed at. `401` means the token was not believed, not that the caller was refused.
 
 ## Environment variables
 

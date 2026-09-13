@@ -55,7 +55,7 @@ func record(target, outcome string) {
 }
 
 // outcome maps an upstream status onto the thing the demo is actually showing -
-// 403 is how the mesh refuses an undeclared caller.
+// 403 is app code refusing a role.
 func outcome(status int) string {
 	switch {
 	case status >= 200 && status < 300:

@@ -94,7 +94,7 @@ const CONNECTIONS_DOC: Source = {
 }
 const APP_CONFIG_DOC: Source = {
   file: "platform/docs/app-configuration.md",
-  note: "what a team declares, and what auth: mesh, workload and user each mean",
+  note: "what a team declares, and what auth: workload and user each mean",
   url: `${HOMELAB}/platform/docs/app-configuration.md`,
 }
 const NOTHING_NOVEL: Source = {
@@ -123,19 +123,20 @@ export const CASES: Case[] = [
     kind: "service mesh · on-platform → on-platform",
     title: "Declared, so it works",
     summary:
-      "Two declarations, one on each side: the caller's way out, the callee's guest list. The call works only because both are there.",
+      "The caller declared what it calls, so the call leaves its pod. Nothing else was needed to reach another app in the mesh.",
     call: {
       from: "authorized-api",
       to: "upstream-api",
-      gate: "callee lets it in?",
+      gate: "may I leave?",
       url: "/authorized/api/call",
-      enforcedAt: "upstream",
+      enforcedAt: "downstream",
       expect: 200,
       request: "GET upstream-api/api/v1/data",
-      why: "<b>Allowed.</b> The caller's identity is named in the policy, so it passes.",
+      why: "<b>Allowed.</b> The caller declared upstream-api, so its own sidecar lets the call out.",
     },
-    deep: `<p>Two yeses, one from each pod. Sharing a namespace is neither.</p>
-<p><b>Neither team wrote a service mesh policy.</b> One declared what it calls, the other who may call it. Platform engineering is the difference between understanding a mesh and shipping without needing to.</p>`,
+    deep: `<p>One line in <code>consumes</code> is the whole reason this works. Sharing a namespace is not.</p>
+<p>On the far side, the callee only checks that the caller is in the mesh at all, with a certificate the cluster issued. Which callers it serves is its own app's decision, made with a token - the Entra cards show that.</p>
+<p><b>Neither team wrote a service mesh policy.</b> One declared what it calls. Platform engineering is the difference between understanding a mesh and shipping without needing to.</p>`,
     declared: [
       {
         code: `consumes:
@@ -144,17 +145,6 @@ export const CASES: Case[] = [
     app: upstream-api`,
         sources: [workspace("authorized-api.yaml", "the caller's way out", 23, 25)],
         actor: "caller",
-      },
-      {
-        code: `provides:
-  - name: Data.Read
-    auth: workload
-    allowedCallers:
-      # ↓ lets the call in, and grants the role
-      - namespace: platform-connections-demo
-        app: authorized-api`,
-        sources: [workspace("upstream-api.yaml", "the callee's guest list", 13, 17)],
-        actor: "callee",
       },
     ],
     rendered: [
@@ -178,74 +168,6 @@ spec:
         actor: "caller",
       },
       {
-        code: `# the way in
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
-metadata:
-  name: upstream-api
-spec:
-  selector:
-    matchLabels: { app.kubernetes.io/instance: upstream-api }
-  action: ALLOW
-  rules:
-    # metrics, on its own port. no principal, because the scraper has none
-    - to:
-        - operation:
-            ports: ["9090"]
-    # provides: Data.Read
-    - from:
-        - source:
-            principals:
-              # ↓ the identity the caller proved with its certificate
-              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-              # no method or path limits, so the grant is the whole API`,
-        sources: [composition("the AuthorizationPolicy template", 1149, 1200)],
-        actor: "callee",
-      },
-    ],
-  },
-  {
-    kind: "service mesh · on-platform → on-platform",
-    title: "Not declared, so it is refused",
-    summary:
-      "Same image, same declared way out. It is missing from the guest list, so it is turned away before the app ever sees it.",
-    call: {
-      from: "unauthorized-api",
-      to: "upstream-api",
-      gate: "callee lets it in?",
-      url: "/unauthorized/api/call",
-      enforcedAt: "upstream",
-      expect: 403,
-      request: "GET upstream-api/api/v1/data",
-      why: "<b>Denied.</b> Nothing was wrong with the caller. It simply was not on the list.",
-    },
-    deep: `<p>upstream-api names one caller: authorized-api. Only the guest list differs.</p>
-<p><b>Could a pod claim to be someone else?</b> No - identity is a certificate, not a header. STRICT mTLS refuses any peer without one, and the name is checked only after the certificate proves it.</p>`,
-    declared: [
-      {
-        code: `consumes:
-  # ↓ the same line the last caller wrote, so it left its own pod fine
-  - namespace: platform-connections-demo
-    app: upstream-api`,
-        sources: [
-          workspace("unauthorized-api.yaml", "the caller, same image, same way out", 14, 15),
-        ],
-        actor: "caller",
-      },
-      {
-        code: `provides:
-  - name: Data.Read
-    auth: workload
-    allowedCallers:
-      - namespace: platform-connections-demo
-        app: authorized-api
-# unauthorized-api is absent, so it is denied`,
-        sources: [workspace("upstream-api.yaml", "the guest list it is missing from", 13, 17)],
-        actor: "callee",
-      },
-    ],
-    rendered: [
-      {
         code: `# no certificate, no conversation
 apiVersion: security.istio.io/v1
 kind: PeerAuthentication
@@ -264,29 +186,53 @@ spec:
         sources: [composition("the PeerAuthentication template", 1125, 1147)],
         actor: "callee",
       },
+    ],
+  },
+  {
+    kind: "service mesh · on-platform → on-platform",
+    title: "Not declared, so it is refused",
+    summary:
+      "Same image, same callee. This caller never declared upstream-api, so the call does not even leave its pod.",
+    call: {
+      from: "unauthorized-api",
+      to: "upstream-api",
+      gate: "may I leave?",
+      url: "/unauthorized/api/call",
+      enforcedAt: "downstream",
+      expect: 502,
+      request: "GET upstream-api/api/v1/data",
+      codeNote: "its own sidecar refused it, upstream-api never saw the call",
+      why: "<b>Blocked on the way out.</b> Nothing was wrong with the caller. It simply never declared this destination.",
+    },
+    deep: `<p>The two callers run one image. The only difference is one <code>consumes</code> line, and it decides whether the call exists.</p>
+<p><b>Could a pod skip its sidecar and connect directly?</b> No. The callee runs STRICT mTLS, so a peer with no cluster certificate has its connection reset before a byte of HTTP is read.</p>`,
+    upstream:
+      "Nothing. The request never left the caller's pod, so upstream-api has nothing to decide.",
+    declared: [
       {
-        code: `# the guest list
-apiVersion: security.istio.io/v1
-kind: AuthorizationPolicy
+        code: `# no consumes block at all
+# upstream-api is absent, so it is unreachable`,
+        sources: [
+          workspace("unauthorized-api.yaml", "the caller, same image, nothing declared", 1, 11),
+        ],
+        actor: "caller",
+      },
+    ],
+    rendered: [
+      {
+        code: `apiVersion: networking.istio.io/v1
+kind: Sidecar
 metadata:
-  name: upstream-api
+  name: unauthorized-api
 spec:
-  selector:
-    matchLabels: { app.kubernetes.io/instance: upstream-api }
-  action: ALLOW
-  rules:
-    # rules are ORed, so this one is a second way in - metrics only
-    - to:
-        - operation:
-            ports: ["9090"]
-    # provides: Data.Read
-    - from:
-        - source:
-            principals:
-              - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
-# unauthorized-api appears in no rule that carries the app port, so it is refused`,
-        sources: [composition("the AuthorizationPolicy template", 1149, 1200)],
-        actor: "callee",
+  outboundTrafficPolicy:
+    mode: REGISTRY_ONLY   # unknown address means no address
+  egress:
+    - hosts:
+        - "istio-system/*"   # istiod, where the sidecar gets its config and certs
+# upstream-api is on no list, so there is nowhere to send it`,
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1202, 1250)],
+        actor: "caller",
       },
     ],
   },
@@ -370,7 +316,7 @@ spec:
       why: "<b>Blocked on the way out.</b> The packet never reaches the internet.",
     },
     deep: `<p>No pod on the far end to hold a policy, so the only place to decide is on the way out.</p>
-<p>Its <code>Sidecar</code> runs <code>REGISTRY_ONLY</code> - the control plane, its namespace, and what it declared. Nothing else exists. No team asked for that default, and none can forget it.</p>`,
+<p>Its <code>Sidecar</code> runs <code>REGISTRY_ONLY</code> - the control plane and what it declared. Nothing else exists. No team asked for that default, and none can forget it.</p>`,
     upstream:
       "Nothing. It is a website on the internet, outside the mesh, and it never learns the call was attempted.",
     declared: [
@@ -490,7 +436,7 @@ spec:
     kind: "entra · on-platform → on-platform",
     title: "A second gate, answering to someone else",
     summary:
-      "The same caller, the same callee, one route further on. The mesh lets it through exactly as before, and then the app asks a question the mesh never asked: was this identity granted the role?",
+      "The same caller, the same callee, one route further on. The mesh carries it exactly as before, and then the app asks a question the mesh never asks: was this identity granted the role?",
     call: {
       from: "authorized-api",
       to: "upstream-api",
@@ -502,7 +448,8 @@ spec:
       request: "GET upstream-api/api/v1/protected",
       why: "<b>Allowed.</b> Every mesh gate passed, and the token carried Data.Read.",
     },
-    deep: `<p>Nothing replaces the mesh. All four checkpoints pass first, then a token is read. This gate can refuse what the mesh allowed, never permit what it refused.</p>
+    deep: `<p>Nothing replaces the mesh. The way out, the registry and mTLS all pass first, then a token is read. This gate can refuse what the mesh carried, never permit what it refused.</p>
+<p><b>This is how a team chooses its callers.</b> The mesh only proves the caller is a workload in the cluster. Who may call, and what for, is the <code>allowedCallers</code> list, and it is enforced here.</p>
 <p><b>Two tokens, neither a password.</b> The pod's <b>SVID</b> says who it is - <code>sub</code> its SPIFFE ID, <code>aud</code> <code>api://AzureADTokenExchange</code>. Entra accepts it because a <b>federated credential</b> names those exact strings, matched literally. Back comes an <b>access token</b>: <code>azp</code> the caller, <code>aud</code> this API, <code>roles</code> what it holds. Only <code>roles</code> decides.</p>
 <p><b>Why a federated credential and not a client secret.</b> The usual way is a password on the app registration, and it has to live somewhere - a vault, a Secret, a pipeline variable - rotated on a calendar and copied into every new environment. This replaces that string with a statement about who may ask. Nothing is issued to store, so nothing can leak, and revoking access is deleting an object rather than chasing copies.</p>
 <p>What the app presents instead is a file. A sidecar the platform adds keeps a fresh SVID at <code>/entra-identity/token</code>, and the app posts it as a <code>client_assertion</code>. It lasts minutes, is minted for that one audience, and the app holds no credential of its own.</p>
@@ -621,7 +568,7 @@ spec:
     kind: "entra · on-platform → on-platform",
     title: "The same caller, refused one route later",
     summary:
-      "This is the caller you just watched succeed. Same identity, same certificate, same guest list, one route further on. It is turned away by something the mesh had no part in.",
+      "This is the caller you just watched succeed. Same identity, same certificate, same way out, one route further on. It is turned away by something the mesh had no part in.",
     call: {
       from: "authorized-api",
       to: "upstream-api",
@@ -632,11 +579,11 @@ spec:
       expect: 403,
       codeNote: "refused by the app, not the proxy",
       request: "GET upstream-api/api/v1/admin",
-      why: "<b>Denied.</b> Allowed in, and still not allowed to do this.",
+      why: "<b>Denied.</b> Carried to the app, and still not allowed to do this.",
     },
     deep: `<p>Nothing changed about the caller - same certificate, same gates, same token, <code>roles</code> still holding <code>Data.Read</code>. This route wants a role that is not in the list, and no signed token can be talked into containing it.</p>
-<p><b>Being let in is not being allowed to do everything.</b> The mesh answers once, at the door, for the whole workload. This answers per route.</p>
-<p><b>Two 403s that look identical and are not.</b> The earlier came from a proxy reading a certificate, this from app code reading a claim - so the response says which gate answered.</p>
+<p><b>Holding one role is not holding them all.</b> The mesh carries the call or does not, for the whole workload. The app answers per route.</p>
+<p><b>A 403 on this page always means app code.</b> The mesh never answers 403 - it refuses a call on the way out as a 502, or resets a peer with no certificate. So the response names the claim that failed, and nothing else could have sent it.</p>
 <p><b>Granting it is one line, and so is taking it back.</b> Adding this caller under <code>Data.Admin</code> renders one more <code>RoleAssignment</code>; deleting the line deletes the object, and the next token comes back without the role. Nothing to rotate, and no secret in anyone's hands to go and collect.</p>`,
     declared: [
       {
@@ -716,7 +663,7 @@ spec:
   <line x1="170" y1="260" x2="170" y2="272" stroke="#03a9f4" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <rect x="30" y="280" width="280" height="52" rx="8" fill="#1a1d27" stroke="#03a9f4" stroke-opacity="0.55"/>
   <text x="170" y="302" class="d-t">mTLS on every call</text>
-  <text x="170" y="320" class="d-s">AuthorizationPolicy decides</text>
+  <text x="170" y="320" class="d-s">PeerAuthentication checks identity</text>
   <line x1="170" y1="332" x2="170" y2="344" stroke="#03a9f4" stroke-opacity="0.5" marker-end="url(#pc-arrow)"/>
   <text x="170" y="362" class="d-d" fill="#03a9f4">pod to pod</text>
   <line x1="500" y1="116" x2="500" y2="132" stroke="#2e3347"/>
