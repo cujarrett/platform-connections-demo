@@ -777,17 +777,9 @@ button:disabled {
      when the row is tight, which is what narrow screens did to it. */
   overflow-wrap: anywhere;
 }
-/* Envoy's own words on a denial - worth more than any label we could write. */
+/* The refusing side's own words - worth more than any label we could write. */
 .body-text.denied {
   color: color-mix(in srgb, var(--color-error) 70%, var(--color-text));
-}
-/* The plain-text body is the evidence the request never reached the app. Say so, or a
-   reader assumes the API returned it and the format is just inconsistent. */
-.body-source {
-  font-size: 0.66rem;
-  color: var(--color-text-muted);
-  font-style: italic;
-  white-space: nowrap;
 }
 
 .why {
@@ -1183,10 +1175,6 @@ button:disabled {
   .body-slot {
     margin-top: 0.4rem;
     flex-wrap: wrap;
-  }
-  .body-source {
-    flex-basis: 100%;
-    white-space: normal;
   }
 }
 
