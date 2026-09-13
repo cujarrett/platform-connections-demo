@@ -96,6 +96,10 @@ interface Result {
           Kubernetes runs the workloads. Service Mesh decides which calls get through.
         </p>
         <p class="sub">
+          A call leaves its pod only if the caller declared where it is going. The app on the other
+          end checks the caller is in the mesh, then reads its token to decide what it may do.
+        </p>
+        <p class="sub">
           Seven live calls, run against
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
             >my bookshelf Kubernetes cluster</a

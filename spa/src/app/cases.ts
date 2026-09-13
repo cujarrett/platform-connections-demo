@@ -118,7 +118,7 @@ export const CASES: Case[] = [
     section: {
       label: "Service mesh",
       blurb:
-        "Enforced by a proxy beside every pod, against certificates this cluster issues. Decides whether a call is carried at all.",
+        "Enforced on the way out, by a proxy beside the caller. It carries a call only to somewhere the caller declared, and the callee accepts it only from a pod in the mesh.",
     },
     kind: "service mesh · on-platform → on-platform",
     title: "Declared, so it works",

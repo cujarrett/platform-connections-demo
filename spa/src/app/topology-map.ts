@@ -204,7 +204,7 @@ export const SCENARIOS: Scenario[] = [
         to: "argocd",
         label: "one file",
         kind: "declared",
-        text: "A team commits an Api resource naming what it needs and who may call it. That file is the only thing anyone writes by hand.",
+        text: "A team commits an Api resource naming what it needs, what it calls, and who holds its interfaces. That file is the only thing anyone writes by hand.",
         who: "Written by the <b>app team</b>. No ticket, no queue, no console.",
         tokenName: "What was asked for",
         claims: [
