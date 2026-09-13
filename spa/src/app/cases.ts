@@ -280,7 +280,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS      # the app's own TLS passes straight through`,
-        sources: [composition("the ServiceEntry per declared host", 1225, 1247)],
+        sources: [composition("the ServiceEntry per declared host", 1225, 1246)],
         actor: "caller",
       },
       {
@@ -328,8 +328,8 @@ spec:
           workspace(
             "authorized-api.yaml",
             "every host it declared, and example.com is not one",
-            23,
-            25,
+            17,
+            18,
           ),
         ],
         actor: "caller",
@@ -422,7 +422,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-        sources: [composition("the ServiceEntry per derived endpoint", 1201, 1223)],
+        sources: [composition("the ServiceEntry per derived endpoint", 1201, 1221)],
         actor: "caller",
       },
     ],
@@ -483,7 +483,7 @@ spec:
     rendered: [
       {
         code: `# the caller's own identity in Entra. no password field anywhere
-apiVersion: applications.azuread.upbound.io/v1beta2
+apiVersion: applications.azuread.m.upbound.io/v1beta1
 kind: Application
 metadata:
   name: platform-connections-demo-authorized-api-entra
@@ -499,7 +499,7 @@ spec:
       {
         code: `# why Entra believes the pod at all, and the reason there is no secret.
 # all three are matched literally - no wildcards, no prefixes
-apiVersion: applications.azuread.upbound.io/v1beta1
+apiVersion: applications.azuread.m.upbound.io/v1beta1
 kind: FederatedIdentityCredential
 spec:
   forProvider:
@@ -507,7 +507,7 @@ spec:
     subject: spiffe://homelab.local/ns/platform-connections-demo/sa/authorized-api
     audiences:
       - api://AzureADTokenExchange`,
-        sources: [composition("the FederatedIdentityCredential template", 892, 920)],
+        sources: [composition("the FederatedIdentityCredential template", 892, 909)],
         actor: "caller",
       },
       {
@@ -535,7 +535,7 @@ spec:
       },
       {
         code: `# the role this API offers
-apiVersion: applications.azuread.upbound.io/v1beta1
+apiVersion: applications.azuread.m.upbound.io/v1beta1
 kind: AppRole
 metadata:
   name: platform-connections-demo-upstream-api-entra-role-data-read
@@ -544,12 +544,12 @@ spec:
     value: Data.Read
     # not User - there is no person behind this call
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("the AppRole template", 922, 942)],
+        sources: [composition("the AppRole template", 922, 941)],
         actor: "callee",
       },
       {
         code: `# the grant itself, one per allowed caller
-apiVersion: app.azuread.upbound.io/v1beta1
+apiVersion: app.azuread.m.upbound.io/v1beta1
 kind: RoleAssignment
 metadata:
   name: platform-connections-demo-upstream-api-entra-grant-data-read-platform-connections-demo-authorized-api
@@ -559,7 +559,7 @@ spec:
       name: platform-connections-demo-authorized-api-entra
     resourceObjectIdRef:
       name: platform-connections-demo-upstream-api-entra`,
-        sources: [composition("the RoleAssignment template", 944, 968)],
+        sources: [composition("the RoleAssignment template", 944, 963)],
         actor: "callee",
       },
     ],
@@ -612,25 +612,25 @@ spec:
     rendered: [
       {
         code: `# both roles exist on the registration
-apiVersion: applications.azuread.upbound.io/v1beta1
+apiVersion: applications.azuread.m.upbound.io/v1beta1
 kind: AppRole
 spec:
   forProvider:
     value: Data.Admin
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("one AppRole per declared role", 922, 942)],
+        sources: [composition("one AppRole per declared role", 922, 941)],
         actor: "callee",
       },
       {
         code: `# one RoleAssignment, for Data.Read only.
 # there is no object granting Data.Admin - that absence is the refusal
-apiVersion: app.azuread.upbound.io/v1beta1
+apiVersion: app.azuread.m.upbound.io/v1beta1
 kind: RoleAssignment
 spec:
   forProvider:
     principalObjectIdRef:
       name: platform-connections-demo-authorized-api-entra`,
-        sources: [composition("one grant per allowed caller, and no more", 944, 968)],
+        sources: [composition("one grant per allowed caller, and no more", 944, 963)],
         actor: "callee",
       },
     ],
