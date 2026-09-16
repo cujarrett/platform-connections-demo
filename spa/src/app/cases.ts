@@ -65,7 +65,7 @@ const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 // Pinned to a commit, not to main. A line range on a moving branch drifts silently and
 // eventually points at the wrong block; a permalink keeps pointing at the code that
 // actually rendered the YAML above. Repin when the composition changes materially.
-const COMPOSITION_SHA = "c7c32fcedf81e494fa15067b68f9ca1dc87c69de"
+const COMPOSITION_SHA = "85de31ea7a8ce1c64fe89042f5384283d30f8b53"
 const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
 
 // GitHub wants the hyphen in the anchor; the badge shows an en dash.
@@ -164,7 +164,7 @@ spec:
         #   and the cards below account for them. no wildcard anywhere
         - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"
         # ...one entry per declared destination`,
-        sources: [composition("the Sidecar egress list", 1151, 1198)],
+        sources: [composition("the Sidecar egress list", 1046, 1093)],
         actor: "caller",
       },
       {
@@ -183,7 +183,7 @@ spec:
     # and has no certificate to present. App traffic is unaffected.
     "9090":
       mode: PERMISSIVE`,
-        sources: [composition("the PeerAuthentication template", 1127, 1149)],
+        sources: [composition("the PeerAuthentication template", 1022, 1044)],
         actor: "callee",
       },
     ],
@@ -231,7 +231,7 @@ spec:
     - hosts:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
 # upstream-api is on no list, so there is nowhere to send it`,
-        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1151, 1198)],
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1046, 1093)],
         actor: "caller",
       },
     ],
@@ -280,7 +280,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS      # the app's own TLS passes straight through`,
-        sources: [composition("the ServiceEntry per declared host", 1225, 1246)],
+        sources: [composition("the ServiceEntry per declared host", 1094, 1148)],
         actor: "caller",
       },
       {
@@ -294,7 +294,7 @@ spec:
     - hosts:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"   # known is not enough, this line permits it`,
-        sources: [composition("the Sidecar egress list", 1151, 1198)],
+        sources: [composition("the Sidecar egress list", 1046, 1093)],
         actor: "caller",
       },
     ],
@@ -351,7 +351,7 @@ spec:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so there is nowhere to send it`,
-        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1151, 1198)],
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1046, 1093)],
         actor: "caller",
       },
     ],
@@ -404,7 +404,7 @@ spec:
         # ↓ every table in the region shares this one host
         - "./dynamodb.us-east-1.amazonaws.com"
         # ...and one more from entra, on the next card`,
-        sources: [composition("the Sidecar egress list", 1151, 1198)],
+        sources: [composition("the Sidecar egress list", 1046, 1093)],
         actor: "caller",
       },
       {
@@ -422,7 +422,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-        sources: [composition("the ServiceEntry per derived endpoint", 1201, 1221)],
+        sources: [composition("the ServiceEntry per derived endpoint", 1094, 1148)],
         actor: "caller",
       },
     ],
@@ -493,7 +493,7 @@ spec:
     api:
       # v1 tokens are issued by sts.windows.net and fail issuer checks
       requestedAccessTokenVersion: 2`,
-        sources: [composition("the Application template", 835, 874)],
+        sources: [composition("the Application template", 730, 769)],
         actor: "caller",
       },
       {
@@ -507,7 +507,7 @@ spec:
     subject: spiffe://homelab.local/ns/platform-connections-demo/sa/authorized-api
     audiences:
       - api://AzureADTokenExchange`,
-        sources: [composition("the FederatedIdentityCredential template", 892, 909)],
+        sources: [composition("the FederatedIdentityCredential template", 787, 804)],
         actor: "caller",
       },
       {
@@ -528,7 +528,7 @@ spec:
     - hosts:
         - "./login.microsoftonline.com"`,
         sources: [
-          composition("the Entra env injection", 443, 459),
+          composition("the Entra env injection", 384, 400),
           composition("login.microsoftonline.com, derived from needing an identity", 163, 168),
         ],
         actor: "caller",
@@ -544,7 +544,7 @@ spec:
     value: Data.Read
     # not User - there is no person behind this call
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("the AppRole template", 922, 941)],
+        sources: [composition("the AppRole template", 817, 836)],
         actor: "callee",
       },
       {
@@ -559,7 +559,7 @@ spec:
       name: platform-connections-demo-authorized-api-entra
     resourceObjectIdRef:
       name: platform-connections-demo-upstream-api-entra`,
-        sources: [composition("the RoleAssignment template", 944, 963)],
+        sources: [composition("the RoleAssignment template", 839, 858)],
         actor: "callee",
       },
     ],
@@ -618,7 +618,7 @@ spec:
   forProvider:
     value: Data.Admin
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("one AppRole per declared role", 922, 941)],
+        sources: [composition("one AppRole per declared role", 817, 836)],
         actor: "callee",
       },
       {
@@ -630,7 +630,7 @@ spec:
   forProvider:
     principalObjectIdRef:
       name: platform-connections-demo-authorized-api-entra`,
-        sources: [composition("one grant per allowed caller, and no more", 944, 963)],
+        sources: [composition("one grant per allowed caller, and no more", 839, 858)],
         actor: "callee",
       },
     ],
