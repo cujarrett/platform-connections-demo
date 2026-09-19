@@ -240,9 +240,9 @@ h1 {
   align-items: start;
   transition: border-color 0.6s ease;
 }
-/* A card carrying a diagram instead of a call. The topology is the widest thing on
-   the page and the two-column rhythm starves it, so this one stacks: heading first,
-   then the diagram across the full width. */
+/* A card carrying a diagram instead of a call. A diagram is the widest thing on the
+   page and the two-column rhythm starves it, so this one stacks: heading first, then
+   the diagram across the full width. */
 .case.wide {
   grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
@@ -255,8 +255,8 @@ h1 {
   margin-left: 0;
 }
 /* No width cap on the panel - the page container is already 72rem, so the column is
-   about 1088px and the topology lands near the 1000px it was authored at. Capping it
-   again only left dead space to the right of a panel that should match every other. */
+   about 1088px, near the width the diagrams were authored at. Capping it again only
+   left dead space to the right of a panel that should match every other. */
 .case.wide .narrative {
   max-width: 72ch;
 }
