@@ -397,7 +397,7 @@ interface Result {
       }
     </div>
     <footer class="app-footer">
-      <a href="https://blog.mattjarrett.dev/platform/" target="_blank" rel="noopener noreferrer"
+      <a href="https://mattjarrett.dev" target="_blank" rel="noopener noreferrer"
         >Made by Matt Jarrett</a
       >
       with ♥ and Kubernetes
