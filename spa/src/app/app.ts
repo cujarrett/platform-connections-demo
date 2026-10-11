@@ -90,7 +90,7 @@ interface Result {
 
     <div class="page">
       <header class="hero">
-        <h1><app-launchpad-mark [animate]="true" />Platform Engineering: Connections</h1>
+        <h1><app-launchpad-mark [animate]="true" />Working POC: Platform Connections</h1>
         <p class="lede">
           Kubernetes runs the workloads. Service Mesh decides which calls get through.
         </p>
@@ -99,7 +99,7 @@ interface Result {
           end checks the caller is in the mesh, then reads its token to decide what it may do.
         </p>
         <p class="sub">
-          Seven live calls, run against
+          Seven live calls, on
           <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
             >my bookshelf Kubernetes cluster</a
           >.
