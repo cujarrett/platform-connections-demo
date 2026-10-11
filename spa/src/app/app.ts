@@ -100,7 +100,7 @@ interface Result {
         </p>
         <p class="sub">
           Seven live calls, on
-          <a href="https://blog.mattjarrett.dev/homelab/" target="_blank" rel="noopener"
+          <a href="https://blog.mattjarrett.dev/platform/" target="_blank" rel="noopener"
             >my bookshelf Kubernetes cluster</a
           >.
           <a
