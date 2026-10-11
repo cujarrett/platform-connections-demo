@@ -1255,3 +1255,23 @@ button:disabled {
     gap: 1rem;
   }
 }
+
+/* Same footer as Launchpad. */
+.app-footer {
+  text-align: center;
+  padding: 0.9rem 1.5rem;
+  background: var(--color-surface);
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+.app-footer a {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.app-footer a:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
