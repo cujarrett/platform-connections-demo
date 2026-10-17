@@ -36,7 +36,7 @@ jobs:
         run: npm run lint
 
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04-arm
     needs: lint
     if: github.ref == 'refs/heads/main'
 
@@ -46,9 +46,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -69,6 +66,8 @@ jobs:
           tags: |
             ghcr.io/cujarrett/platform-connections-demo-spa:latest
             ghcr.io/cujarrett/platform-connections-demo-spa:sha-${{ github.sha }}
+          cache-from: type=gha,scope=spa
+          cache-to: type=gha,mode=max,scope=spa
 
   deploy:
     needs: build-and-push
