@@ -54,8 +54,8 @@ func record(target, outcome string) {
 	calls[callKey{target, outcome}]++
 }
 
-// outcome maps an upstream status onto the thing the demo is actually showing -
-// 403 is app code refusing a role.
+// outcome maps an upstream status onto what the demo shows.
+// 403 is a refusal, from the callee's mesh policy or its app code.
 func outcome(status int) string {
 	switch {
 	case status >= 200 && status < 300:

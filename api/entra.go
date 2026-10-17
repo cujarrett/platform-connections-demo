@@ -192,7 +192,8 @@ type decision struct {
 	Presented tokenView `json:"presented"`
 }
 
-// Always names which check failed - a bare 403 teaches nothing.
+// Always names which check failed - a mesh 403 and a role 403 look identical from
+// outside, and a bare one teaches nothing.
 func entraDeny(w http.ResponseWriter, code int, reason, detail string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
