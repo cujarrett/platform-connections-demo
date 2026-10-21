@@ -78,4 +78,4 @@ jobs:
       image: ghcr.io/cujarrett/platform-connections-demo-downstream
       file: ${{ matrix.file }}
     secrets:
-      homelab_pat: ${{ secrets.HOMELAB_WORKSPACES_PAT }}
+      app_private_key: ${{ secrets.HOMELAB_WORKSPACES_APP_KEY }}

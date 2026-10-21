@@ -70,4 +70,4 @@ jobs:
       image: ghcr.io/cujarrett/platform-connections-demo-api
       file: platform-connections-demo/upstream-api.yaml
     secrets:
-      homelab_pat: ${{ secrets.HOMELAB_WORKSPACES_PAT }}
+      app_private_key: ${{ secrets.HOMELAB_WORKSPACES_APP_KEY }}
