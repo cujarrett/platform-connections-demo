@@ -35,13 +35,18 @@ const pins: Pin[] = [
   },
 ]
 
-async function block(url: string, from: number, to: number): Promise<string> {
+async function lines(url: string): Promise<string[]> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`${url} returned ${res.status}`)
-  return (await res.text())
-    .split("\n")
-    .slice(from - 1, to)
-    .join("\n")
+  return (await res.text()).split("\n")
+}
+
+// A block that only moved is found again on main, so the fix is a line-number edit.
+function movedTo(file: string[], block: string[]): string {
+  const at = file.findIndex(
+    (_, i) => file.slice(i, i + block.length).join("\n") === block.join("\n"),
+  )
+  return at < 0 ? "changed, reread it" : `moved to ${at + 1}, ${at + block.length}`
 }
 
 const drifted: string[] = []
@@ -52,10 +57,13 @@ for (const pin of pins) {
     const key = `${file}:${from}-${to}`
     if (seen.has(key)) continue
     seen.add(key)
-    const pinned = await block(pin.raw(pin.sha, file), Number(from), Number(to))
-    const current = await block(pin.raw("main", file), Number(from), Number(to))
-    if (pinned !== current)
-      drifted.push(`${pin.fn}: ${file ?? "composition.yaml"} L${from}-L${to} (${note})`)
+    const pinned = (await lines(pin.raw(pin.sha, file))).slice(Number(from) - 1, Number(to))
+    const main = await lines(pin.raw("main", file))
+    const current = main.slice(Number(from) - 1, Number(to))
+    if (pinned.join("\n") !== current.join("\n"))
+      drifted.push(
+        `${pin.fn}: ${file ?? "composition.yaml"} L${from}-L${to} (${note}), ${movedTo(main, pinned)}`,
+      )
   }
 }
 
