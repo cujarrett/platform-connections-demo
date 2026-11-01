@@ -52,6 +52,6 @@ One workflow per app. A push to `main` runs only the workflows whose directory c
 
 | Secret | Used by | Scope needed |
 |---|---|---|
-| `HOMELAB_WORKSPACES_PAT` | deploy job in every workflow | a PAT with push access to `cujarrett/homelab-workspaces` |
+| `HOMELAB_WORKSPACES_APP_KEY` | deploy job in every workflow | private key of the GitHub App that pushes to `cujarrett/homelab-workspaces` |
 
 `GITHUB_TOKEN` (built in) covers the `ghcr.io` image push.
