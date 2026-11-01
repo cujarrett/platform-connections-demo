@@ -65,7 +65,7 @@ const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 // Pinned to a commit, not to main. A line range on a moving branch drifts silently and
 // eventually points at the wrong block; a permalink keeps pointing at the code that
 // actually rendered the YAML above. Repin when the composition changes materially.
-const COMPOSITION_SHA = "fec7891c46e53dcb727553ec85d9133b885ceaa3"
+const COMPOSITION_SHA = "494399484fa623fa9e281d71c2dbcd420a53e9ab"
 const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
 
 // GitHub wants the hyphen in the anchor; the badge shows an en dash.
@@ -174,7 +174,7 @@ spec:
         #   and the cards below account for them. no wildcard anywhere
         - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"
         # ...one entry per declared destination`,
-        sources: [composition("the Sidecar egress list", 1077, 1134)],
+        sources: [composition("the Sidecar egress list", 1082, 1139)],
         actor: "caller",
       },
       {
@@ -199,7 +199,7 @@ spec:
               # ↓ the identity the caller proved with its certificate
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
               # no method or path limits, so the grant is the whole API`,
-        sources: [composition("the AuthorizationPolicy template", 1025, 1075)],
+        sources: [composition("the AuthorizationPolicy template", 1030, 1080)],
         actor: "callee",
       },
     ],
@@ -261,7 +261,7 @@ spec:
     # and has no certificate to present. App traffic is unaffected.
     "9090":
       mode: PERMISSIVE`,
-        sources: [composition("the PeerAuthentication template", 1001, 1023)],
+        sources: [composition("the PeerAuthentication template", 1006, 1028)],
         actor: "callee",
       },
       {
@@ -285,7 +285,7 @@ spec:
             principals:
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
 # unauthorized-api appears in no rule that carries the app port, so it is refused`,
-        sources: [composition("the AuthorizationPolicy template", 1025, 1075)],
+        sources: [composition("the AuthorizationPolicy template", 1030, 1080)],
         actor: "callee",
       },
     ],
@@ -334,7 +334,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS      # the app's own TLS passes straight through`,
-        sources: [composition("the ServiceEntry per declared host", 1135, 1189)],
+        sources: [composition("the ServiceEntry per declared host", 1140, 1194)],
         actor: "caller",
       },
       {
@@ -348,7 +348,7 @@ spec:
     - hosts:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"   # known is not enough, this line permits it`,
-        sources: [composition("the Sidecar egress list", 1077, 1134)],
+        sources: [composition("the Sidecar egress list", 1082, 1139)],
         actor: "caller",
       },
     ],
@@ -405,7 +405,7 @@ spec:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so there is nowhere to send it`,
-        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1077, 1134)],
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1082, 1139)],
         actor: "caller",
       },
     ],
@@ -458,7 +458,7 @@ spec:
         # ↓ every table in the region shares this one host
         - "./dynamodb.us-east-1.amazonaws.com"
         # ...and one more from entra, on the next card`,
-        sources: [composition("the Sidecar egress list", 1077, 1134)],
+        sources: [composition("the Sidecar egress list", 1082, 1139)],
         actor: "caller",
       },
       {
@@ -476,7 +476,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-        sources: [composition("the ServiceEntry per derived endpoint", 1135, 1189)],
+        sources: [composition("the ServiceEntry per derived endpoint", 1140, 1194)],
         actor: "caller",
       },
     ],
@@ -546,7 +546,7 @@ spec:
     api:
       # v1 tokens are issued by sts.windows.net and fail issuer checks
       requestedAccessTokenVersion: 2`,
-        sources: [composition("the Application template", 700, 739)],
+        sources: [composition("the Application template", 705, 744)],
         actor: "caller",
       },
       {
@@ -560,7 +560,7 @@ spec:
     subject: spiffe://homelab.local/ns/platform-connections-demo/sa/authorized-api
     audiences:
       - api://AzureADTokenExchange`,
-        sources: [composition("the FederatedIdentityCredential template", 757, 774)],
+        sources: [composition("the FederatedIdentityCredential template", 762, 779)],
         actor: "caller",
       },
       {
@@ -581,8 +581,8 @@ spec:
     - hosts:
         - "./login.microsoftonline.com"`,
         sources: [
-          composition("the Entra env injection", 464, 480),
-          composition("login.microsoftonline.com, derived from needing an identity", 189, 194),
+          composition("the Entra env injection", 469, 485),
+          composition("login.microsoftonline.com, derived from needing an identity", 194, 199),
         ],
         actor: "caller",
       },
@@ -597,7 +597,7 @@ spec:
     value: Data.Read
     # not User - there is no person behind this call
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("the AppRole template", 787, 806)],
+        sources: [composition("the AppRole template", 792, 811)],
         actor: "callee",
       },
       {
@@ -612,7 +612,7 @@ spec:
       name: platform-connections-demo-authorized-api-entra
     resourceObjectIdRef:
       name: platform-connections-demo-upstream-api-entra`,
-        sources: [composition("the RoleAssignment template", 809, 828)],
+        sources: [composition("the RoleAssignment template", 814, 833)],
         actor: "callee",
       },
     ],
@@ -671,7 +671,7 @@ spec:
   forProvider:
     value: Data.Admin
     allowedMemberTypes: ["Application"]`,
-        sources: [composition("one AppRole per declared role", 787, 806)],
+        sources: [composition("one AppRole per declared role", 792, 811)],
         actor: "callee",
       },
       {
@@ -683,7 +683,7 @@ spec:
   forProvider:
     principalObjectIdRef:
       name: platform-connections-demo-authorized-api-entra`,
-        sources: [composition("one grant per allowed caller, and no more", 809, 828)],
+        sources: [composition("one grant per allowed caller, and no more", 814, 833)],
         actor: "callee",
       },
     ],
