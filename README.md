@@ -12,15 +12,15 @@ Three apps in one namespace. Two of them run a byte-identical image and differ o
 
 ## Run it
 
-```bash
-cd spa
-just dev
-```
+Both commands run from `spa/` and serve the walkthrough on http://localhost:4200. Run `just install` first.
 
-Then open **http://localhost:4200**.
+| Command | Callers |
+|---|---|
+| `just dev` | The two callers in the cluster, port-forwarded. Needs `kubectl` pointed at the homelab |
+| `npm run start:prod-api` | The live site, `connections.mattjarrett.dev`. Needs only Node |
 
-That port-forwards the two callers and serves the walkthrough against them. The results are real: port-forwarding carries only the first hop from your laptop, so every decision still happens inside the cluster.
+Both give real results. Port-forwarding carries only the first hop from your laptop, so every decision still happens inside the cluster. The callers have no from-source variant, because the mesh that makes each decision only runs in the cluster.
 
-Needs `kubectl` pointed at the homelab, plus `just` and Node. `just --list` shows the rest.
+`just --list` shows the rest.
 
 Each Go app has its own `justfile` - `just ci` to lint, test and build.

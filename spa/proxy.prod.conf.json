@@ -1,0 +1,12 @@
+{
+  "/authorized": {
+    "target": "https://connections.mattjarrett.dev",
+    "secure": true,
+    "changeOrigin": true
+  },
+  "/unauthorized": {
+    "target": "https://connections.mattjarrett.dev",
+    "secure": true,
+    "changeOrigin": true
+  }
+}
