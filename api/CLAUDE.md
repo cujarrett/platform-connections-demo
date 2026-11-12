@@ -47,6 +47,6 @@ Go HTTP API. Single binary, no frameworks. The upstream service in the homelab p
 - `slog` for structured logging
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON
-- Binary name matches repo name
+- Binary name matches the directory name, `api`
 - A refusal always names the gate that answered - a mesh 403 and a role 403 are indistinguishable otherwise
 - `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` come from the platform. Unset means the role routes refuse everything rather than verify half a token

@@ -50,6 +50,6 @@ Go HTTP API. Single binary, no frameworks. The caller in the homelab platform-co
 - `slog` for structured logging
 - Graceful shutdown via `signal.NotifyContext`
 - Errors returned as `{"error":"..."}` JSON
-- Binary name matches repo name
+- Binary name matches the directory name, `downstream`
 - Every `AZURE_*`, `ENTRA_SCOPE_*` and AWS variable is injected by the platform from what the `Api` declared. None is a secret, and none is written by hand
 - Credentials never reach a response body. The Entra routes return only the identity proved and the API asked for
