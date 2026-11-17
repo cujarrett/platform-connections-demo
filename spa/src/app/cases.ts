@@ -65,7 +65,7 @@ const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 // Pinned to a commit, not to main. A line range on a moving branch drifts silently and
 // eventually points at the wrong block; a permalink keeps pointing at the code that
 // actually rendered the YAML above. Repin when the composition changes materially.
-const COMPOSITION_SHA = "f82c4c6d10797ee388fa77cbc3e69c589d326283"
+const COMPOSITION_SHA = "fa0d5cd14f2da6a59d6b202db2bb719a5e09c29d"
 const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
 
 // GitHub wants the hyphen in the anchor; the badge shows an en dash.
@@ -174,7 +174,7 @@ spec:
         #   and the cards below account for them. no wildcard anywhere
         - "platform-connections-demo/upstream-api.platform-connections-demo.svc.cluster.local"
         # ...one entry per declared destination`,
-        sources: [composition("the Sidecar egress list", 1214, 1275)],
+        sources: [composition("the Sidecar egress list", 1219, 1280)],
         actor: "caller",
       },
       {
@@ -200,7 +200,7 @@ spec:
               # ↓ the identity the caller proved with its certificate
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
               # no method or path limits, so the grant is the whole API`,
-        sources: [composition("the AuthorizationPolicy template", 1140, 1191)],
+        sources: [composition("the AuthorizationPolicy template", 1140, 1196)],
         actor: "callee",
       },
     ],
@@ -287,7 +287,7 @@ spec:
             principals:
               - "cluster.local/ns/platform-connections-demo/sa/authorized-api"
 # unauthorized-api appears in no rule that carries the app port, so it is refused`,
-        sources: [composition("the AuthorizationPolicy template", 1140, 1191)],
+        sources: [composition("the AuthorizationPolicy template", 1140, 1196)],
         actor: "callee",
       },
     ],
@@ -336,7 +336,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS      # the app's own TLS passes straight through`,
-        sources: [composition("the ServiceEntry per declared host", 1276, 1330)],
+        sources: [composition("the ServiceEntry per declared host", 1281, 1335)],
         actor: "caller",
       },
       {
@@ -350,7 +350,7 @@ spec:
     - hosts:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"   # known is not enough, this line permits it`,
-        sources: [composition("the Sidecar egress list", 1214, 1275)],
+        sources: [composition("the Sidecar egress list", 1219, 1280)],
         actor: "caller",
       },
     ],
@@ -407,7 +407,7 @@ spec:
         - "istio-system/*"   # istiod, where the sidecar gets its config and certs
         - "./api.open-meteo.com"    # the one host it declared
 # example.com is on no list, so there is nowhere to send it`,
-        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1214, 1275)],
+        sources: [composition("REGISTRY_ONLY and the Sidecar egress list", 1219, 1280)],
         actor: "caller",
       },
     ],
@@ -460,7 +460,7 @@ spec:
         # ↓ every table in the region shares this one host
         - "./dynamodb.us-east-1.amazonaws.com"
         # ...and one more from entra, on the next card`,
-        sources: [composition("the Sidecar egress list", 1214, 1275)],
+        sources: [composition("the Sidecar egress list", 1219, 1280)],
         actor: "caller",
       },
       {
@@ -478,7 +478,7 @@ spec:
     - number: 443
       name: tls
       protocol: TLS`,
-        sources: [composition("the ServiceEntry per derived endpoint", 1276, 1330)],
+        sources: [composition("the ServiceEntry per derived endpoint", 1281, 1335)],
         actor: "caller",
       },
     ],
