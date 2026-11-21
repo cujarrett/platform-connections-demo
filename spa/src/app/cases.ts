@@ -65,7 +65,7 @@ const HOMELAB = "https://github.com/cujarrett/homelab/blob/main"
 // Pinned to a commit, not to main. A line range on a moving branch drifts silently and
 // eventually points at the wrong block; a permalink keeps pointing at the code that
 // actually rendered the YAML above. Repin when the composition changes materially.
-const COMPOSITION_SHA = "fa0d5cd14f2da6a59d6b202db2bb719a5e09c29d"
+const COMPOSITION_SHA = "7ed4a0eda1624fb1f3952e0bc83337188b6dd88e"
 const COMPOSITION = `https://github.com/cujarrett/homelab/blob/${COMPOSITION_SHA}/platform/api/composition.yaml`
 
 // GitHub wants the hyphen in the anchor; the badge shows an en dash.
