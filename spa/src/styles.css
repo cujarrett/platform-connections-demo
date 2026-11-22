@@ -1269,20 +1269,21 @@ button:disabled {
 }
 
 /* Same footer as Launchpad. */
+/* Only the name is a link. The line is the site's light accent, on the page's own background. */
 .app-footer {
   text-align: center;
   padding: 0.9rem 1.5rem;
   font-size: 1rem;
-  color: var(--color-text-muted);
+  color: var(--color-accent-text);
   letter-spacing: 0.01em;
 }
 .app-footer a {
-  color: var(--color-text-muted);
+  color: var(--color-accent-text);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color 0.15s;
 }
 .app-footer a:hover {
-  color: var(--color-accent);
+  color: var(--color-text);
   text-decoration: none;
 }
