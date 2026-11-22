@@ -11,6 +11,6 @@ RUN npm run build
 # The Spa Crossplane composition mounts its own nginx config over
 # /etc/nginx/conf.d/default.conf, so only the static files matter here.
 # The platform base image already carries Alpine's security fixes.
-FROM ghcr.io/cujarrett/base-nginx:1.31-alpine@sha256:5a496bb0fc48c56667dd14b68390213f35380810ad3a36e1c632a7702990394a
+FROM ghcr.io/cujarrett/base-nginx:1.31-alpine@sha256:fcaa2759ec56a2e5c5d0a3725274a52f4e233aa3ff8c6d25003422b0aa1e57aa
 COPY --from=build /app/dist/spa/browser /usr/share/nginx/html
 EXPOSE 80
